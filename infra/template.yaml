@@ -1,0 +1,172 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: |
+  Demo educacional — Lambda + SNS + SQS + DynamoDB
+  Cobre fan-out (U1V7), idempotência (U1V8) e DLQ (U1V9).
+
+Globals:
+  Function:
+    Runtime: python3.12
+    MemorySize: 256
+    Timeout: 30
+
+# ─────────────────────────────────────────────────────────────────────────────
+# U1V7 — Fan-out
+# Um único publish no SNS se desdobra em duas filas SQS independentes.
+# O fan-out está nas assinaturas (recursos abaixo), não no código do produtor.
+# ─────────────────────────────────────────────────────────────────────────────
+
+Resources:
+
+  TopicoPedidos:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: pedidos
+
+  FilaEstoque:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: fila-estoque
+      VisibilityTimeout: 30
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt FilaEstoqueDLQ.Arn
+        maxReceiveCount: 3
+
+  FilaNotificacao:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: fila-notificacao
+
+  # AQUI mora o fan-out: 1 tópico → 2 assinaturas
+  AssinaturaEstoque:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref TopicoPedidos
+      Protocol: sqs
+      Endpoint: !GetAtt FilaEstoque.Arn
+      RawMessageDelivery: true  # entrega JSON puro, sem envelope SNS
+
+  AssinaturaNotificacao:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref TopicoPedidos
+      Protocol: sqs
+      Endpoint: !GetAtt FilaNotificacao.Arn
+      RawMessageDelivery: true
+
+  # Política que autoriza o SNS a entregar nas filas (pegadinha clássica via CLI/IaC)
+  PoliticaFilas:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref FilaEstoque
+        - !Ref FilaNotificacao
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sqs:SendMessage
+            Resource:
+              - !GetAtt FilaEstoque.Arn
+              - !GetAtt FilaNotificacao.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref TopicoPedidos
+
+  ProdutorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: produtor
+      Handler: produtor.lambda_handler
+      CodeUri: ../src/U1V7_fanout/
+      Environment:
+        Variables:
+          TOPIC_ARN: !Ref TopicoPedidos
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt TopicoPedidos.TopicName
+
+  EstoqueFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: estoque
+      Handler: estoque.lambda_handler
+      CodeUri: ../src/U1V7_fanout/
+      Events:
+        FilaEstoqueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt FilaEstoque.Arn
+            BatchSize: 10
+
+  NotificacaoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: notificacao
+      Handler: notificacao.lambda_handler
+      CodeUri: ../src/U1V7_fanout/
+      Events:
+        FilaNotificacaoEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt FilaNotificacao.Arn
+            BatchSize: 10
+
+# ─────────────────────────────────────────────────────────────────────────────
+# U1V8 — Idempotência
+# ─────────────────────────────────────────────────────────────────────────────
+
+  TabelaMensagensProcessadas:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: mensagens-processadas
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: messageId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: messageId
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expira_em
+        Enabled: true
+
+  ProcessaPedidoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: processa-pedido
+      Handler: processa_pedido.lambda_handler
+      CodeUri: ../src/U1V8_idempotencia/
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref TabelaMensagensProcessadas
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TabelaMensagensProcessadas
+
+# ─────────────────────────────────────────────────────────────────────────────
+# U1V9 — DLQ
+# ─────────────────────────────────────────────────────────────────────────────
+
+  FilaEstoqueDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: fila-estoque-dlq
+      MessageRetentionPeriod: 1209600  # 14 dias (máximo SQS) — janela para investigar
+
+  ConsumidoraBFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: consumidora-b
+      Handler: consumidora_b.lambda_handler
+      CodeUri: ../src/U1V9_dlq/
+      # Timeout < VisibilityTimeout da fila (30s < 30s não funciona; use 20s < 30s)
+      Timeout: 20
+      Events:
+        FilaEstoqueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt FilaEstoque.Arn
+            BatchSize: 1  # 1 por vez: facilita observar o ciclo de retry no log
