@@ -1,6 +1,11 @@
 """
 Utilitários compartilhados entre os testes.
 
+# from __future__ import annotations habilita a sintaxe `dict | None` em Python 3.7–3.9.
+# Em Python 3.10+ é desnecessário, mas não causa nenhum problema.
+from __future__ import annotations
+
+
 Padrões adotados do projeto aspire-aws:
 - wait_until: polling com timeout em vez de time.sleep fixo
 - deploy_lambda: empacota e sobe um handler .py no LocalStack
