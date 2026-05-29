@@ -15,7 +15,7 @@ import uuid
 
 import pytest
 
-from tests.helpers import wait_until
+from tests.helpers import drain_queue, wait_until
 
 # ── Fixtures de módulo ────────────────────────────────────────────────────────
 
@@ -53,6 +53,12 @@ def filas(sqs, sns, topic_arn) -> dict:
             Attributes={"RawMessageDelivery": "true"},
         )
 
+    # Drena mensagens de execuções anteriores para garantir isolamento.
+    # Sem isso, receive_message com MaxNumberOfMessages=1 pode ficar preso
+    # em mensagens velhas e nunca encontrar a nova dentro do timeout.
+    drain_queue(sqs, fila_estoque_url)
+    drain_queue(sqs, fila_notif_url)
+
     return {
         "estoque_url": fila_estoque_url,
         "notificacao_url": fila_notif_url,
@@ -79,7 +85,7 @@ def test_uma_publicacao_chega_na_fila_estoque(sns, sqs, topic_arn, filas):
     def mensagem_chegou():
         resp = sqs.receive_message(
             QueueUrl=filas["estoque_url"],
-            MaxNumberOfMessages=1,
+            MaxNumberOfMessages=10,
             VisibilityTimeout=5,
         )
         mensagens = resp.get("Messages", [])
@@ -99,7 +105,7 @@ def test_uma_publicacao_chega_na_fila_notificacao(sns, sqs, topic_arn, filas):
     def mensagem_chegou():
         resp = sqs.receive_message(
             QueueUrl=filas["notificacao_url"],
-            MaxNumberOfMessages=1,
+            MaxNumberOfMessages=10,
             VisibilityTimeout=5,
         )
         mensagens = resp.get("Messages", [])

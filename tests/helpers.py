@@ -43,6 +43,32 @@ def make_resource(service: str):
 
 # ── Polling helper ────────────────────────────────────────────────────────────
 
+def drain_queue(sqs_client, queue_url: str) -> int:
+    """
+    Remove todas as mensagens pendentes de uma fila SQS.
+    Garante isolamento entre execuções de teste — sem mensagens antigas
+    que causariam falsos negativos em receive_message com MaxNumberOfMessages=1.
+    Retorna o número de mensagens removidas.
+    """
+    removidas = 0
+    while True:
+        resp = sqs_client.receive_message(
+            QueueUrl=queue_url,
+            MaxNumberOfMessages=10,
+            VisibilityTimeout=1,
+        )
+        msgs = resp.get("Messages", [])
+        if not msgs:
+            break
+        for m in msgs:
+            sqs_client.delete_message(
+                QueueUrl=queue_url,
+                ReceiptHandle=m["ReceiptHandle"],
+            )
+        removidas += len(msgs)
+    return removidas
+
+
 def wait_until(
     condition: Callable[[], bool],
     timeout: float = 30.0,
