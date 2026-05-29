@@ -25,8 +25,12 @@ teardown:  ## Remove os recursos criados pelo setup
 
 # ── Dependências ──────────────────────────────────────────────────────────────
 
-install:  ## Instala dependências Python
-	pip install -r requirements.txt
+install:  ## Cria o ambiente virtual e instala dependências Python
+	python3 -m venv .venv
+	.venv/bin/pip install -r requirements.txt
+	@echo ""
+	@echo "✅  Dependências instaladas. Ative o ambiente com:"
+	@echo "    source .venv/bin/activate"
 
 # ── Testes ────────────────────────────────────────────────────────────────────
 

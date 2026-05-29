@@ -130,15 +130,21 @@ flowchart TD
 ## Quick Start (modo local)
 
 ```bash
-# 1. Clonar e instalar dependências
+# 1. Clonar o repositório
 git clone <url>
 cd serverless-event-driven
+
+# 2. Criar ambiente virtual e instalar dependências
+python3 -m venv .venv
+source .venv/bin/activate      # Mac/Linux
+# .venv\Scripts\activate       # Windows
+
 pip install -r requirements.txt
 
-# 2. Subir o LocalStack
+# 3. Subir o LocalStack
 make up
 
-# 3. Rodar todas as demos
+# 4. Rodar todas as demos
 make test
 
 # Ou rodar uma demo por vez:
@@ -146,14 +152,16 @@ make test-v7   # fan-out
 make test-v8   # idempotência
 make test-v9   # DLQ (~2 min — aguarda 3 ciclos de retry)
 
-# 4. Inspecionar recursos criados
+# 5. Inspecionar recursos criados
 export AWS_ENDPOINT_URL=http://localhost:4566
 aws --endpoint-url=$AWS_ENDPOINT_URL sns list-topics
 aws --endpoint-url=$AWS_ENDPOINT_URL sqs list-queues
 
-# 5. Limpar
+# 6. Limpar
 make clean
 ```
+
+> **Lembrete:** sempre ative o ambiente virtual antes de rodar os testes (`source .venv/bin/activate`). O prompt do terminal mostrará `(.venv)` quando estiver ativo.
 
 ---
 
