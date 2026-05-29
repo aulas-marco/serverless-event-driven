@@ -8,34 +8,106 @@ Cada demo é executável localmente via LocalStack ou na AWS Real, **sem nenhuma
 
 ## As três demos
 
-```mermaid
-flowchart TD
-    subgraph V7["U1V7 — Fan-out"]
-        P([Lambda Produtor]) -- "1× publish" --> SNS[[SNS: pedidos]]
-        SNS --> QE([SQS: fila-estoque]) --> LE([Lambda Estoque])
-        SNS --> QN([SQS: fila-notificacao]) --> LN([Lambda Notificação])
-    end
-
-    subgraph V8["U1V8 — Idempotência"]
-        SQS2([SQS]) --> LI([Lambda\nprocessa_pedido])
-        LI -- "PutItem\nattribute_not_exists" --> DDB[(DynamoDB)]
-    end
-
-    subgraph V9["U1V9 — DLQ"]
-        SQS3([SQS: fila-estoque]) --> LC([Lambda\nconsumidora_b])
-        LC -- "RuntimeException\n3× falha" --> DLQ([SQS: DLQ])
-    end
-
-    style V7 fill:#e8f5e9,stroke:#4caf50
-    style V8 fill:#e3f2fd,stroke:#2196f3
-    style V9 fill:#fff3e0,stroke:#ff9800
-```
-
 | Demo | Padrão | Serviços |
 |---|---|---|
 | **U1V7** | Fan-out pub/sub | SNS → SQS → Lambda |
 | **U1V8** | Idempotência at-least-once | SQS → Lambda → DynamoDB |
 | **U1V9** | Dead-Letter Queue | SQS + DLQ → Lambda |
+
+---
+
+### U1V7 — Fan-out
+
+> Uma publicação no SNS se desdobra em duas filas SQS independentes. O produtor não conhece as filas — conhece apenas o tópico.
+
+```mermaid
+flowchart LR
+    Produtor(["🔵 Lambda A\nprodutor.py"])
+
+    subgraph SNS["SNS"]
+        T[["tópico: pedidos"]]
+    end
+
+    subgraph Filas["Filas SQS  ← fan-out acontece aqui"]
+        QE(["fila-estoque"])
+        QN(["fila-notificacao"])
+    end
+
+    subgraph Consumidoras["Consumidoras"]
+        LE(["🟢 Lambda B\nestoque.py"])
+        LN(["🟢 Lambda C\nnotificacao.py"])
+    end
+
+    Produtor -- "1× publish(PedidoCriado)" --> T
+    T -- "assinatura\nRawMessageDelivery=true" --> QE
+    T -- "assinatura\nRawMessageDelivery=true" --> QN
+    QE -- "event source mapping" --> LE
+    QN -- "event source mapping" --> LN
+
+    style Filas fill:#fff9c4,stroke:#f9a825
+    style SNS fill:#e8f5e9,stroke:#4caf50
+    style Consumidoras fill:#e3f2fd,stroke:#1976d2
+```
+
+---
+
+### U1V8 — Idempotência
+
+> O SQS entrega *at-least-once*: a mesma mensagem pode chegar duas vezes. O `PutItem` condicional garante que o efeito colateral aconteça exatamente uma vez.
+
+```mermaid
+sequenceDiagram
+    actor SQS as SQS
+    participant L as Lambda<br/>processa_pedido.py
+    participant D as DynamoDB<br/>mensagens-processadas
+
+    Note over SQS: Primeira entrega
+    SQS->>L: messageId = "P-001"
+    L->>D: PutItem("P-001")<br/>condition: attribute_not_exists
+    D-->>L: ✅ SUCESSO — item criado
+    L->>L: processar_pedido() ← efeito colateral
+
+    Note over SQS: Reentrega da mesma mensagem
+    SQS->>L: messageId = "P-001"
+    L->>D: PutItem("P-001")<br/>condition: attribute_not_exists
+    D-->>L: ❌ ConditionalCheckFailedException
+    L->>L: descartar silenciosamente<br/>← nenhum efeito colateral
+```
+
+---
+
+### U1V9 — Dead-Letter Queue
+
+> Uma *poison message* falha 3 vezes consecutivas e é roteada para a DLQ. A fila principal continua processando as demais mensagens normalmente.
+
+```mermaid
+flowchart TD
+    M(["📨 mensagem\ndefeituoso: true"])
+
+    subgraph Fila["SQS: fila-estoque\n(maxReceiveCount = 3)"]
+        direction LR
+        R1["recepção 1"] --> R2["recepção 2"] --> R3["recepção 3"]
+    end
+
+    subgraph Lambda["Lambda: consumidora_b.py"]
+        F["raise RuntimeError\n(falha proposital)"]
+    end
+
+    DLQ(["🚨 SQS: fila-estoque-dlq\npayload retido intacto\n(14 dias)"])
+    OK(["✅ mensagem saudável\nprocessada normalmente"])
+
+    M --> Fila
+    Fila -- "ESM trigger" --> Lambda
+    Lambda -- "exceção → visibility timeout → volta" --> Fila
+    R3 -- "4ª recepção\nmaxReceiveCount atingido" --> DLQ
+
+    M2(["📨 mensagem normal\ndefeituoso: false"]) --> Fila
+    Lambda -- "sucesso" --> OK
+
+    style DLQ fill:#ffebee,stroke:#c62828
+    style OK fill:#e8f5e9,stroke:#2e7d32
+    style Fila fill:#fff3e0,stroke:#e65100
+```
 
 ---
 
@@ -45,10 +117,13 @@ flowchart TD
 |---|---|---|
 | Docker | recente | Subir o LocalStack |
 | Python | 3.12 | Rodar os testes |
+| make | qualquer | Atalhos de comando (pré-instalado no Mac via Xcode CLI Tools) |
 | AWS CLI v2 | recente | Inspecionar recursos via terminal |
 | SAM CLI | recente | Deploy na AWS Real (opcional) |
 
 > `boto3` e `pytest` são instalados via `pip install -r requirements.txt`.
+
+> **Mac:** `make` já vem com o Xcode Command Line Tools. Se não tiver instalado: `xcode-select --install`. Para verificar: `make --version`.
 
 ---
 
