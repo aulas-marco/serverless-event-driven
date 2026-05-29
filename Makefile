@@ -26,11 +26,12 @@ teardown:  ## Remove os recursos criados pelo setup
 
 # ── Dependências ──────────────────────────────────────────────────────────────
 
-install:  ## Cria o ambiente virtual e instala dependências Python
-	python3 -m venv $(VENV)
-	$(VENV)/bin/pip install -r requirements.txt
+install:  ## Cria o ambiente virtual com Python 3.13 e instala dependências
+	$(or $(shell which python3.13 2>/dev/null),$(shell which python3)) -m venv $(VENV)
+	$(VENV)/bin/pip install --upgrade pip -q
+	$(VENV)/bin/pip install -r requirements.txt -q
 	@echo ""
-	@echo "✅  Dependências instaladas em $(VENV)/"
+	@echo "✅  Dependências instaladas em $(VENV)/ — $$($(VENV)/bin/python3 --version)"
 
 # ── Testes ────────────────────────────────────────────────────────────────────
 
