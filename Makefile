@@ -1,6 +1,7 @@
 .PHONY: up down setup test test-v7 test-v8 test-v9 clean lint help
 
-PYTHON  := python3
+VENV    := .venv
+PYTHON  := $(VENV)/bin/python3
 PYTEST  := $(PYTHON) -m pytest
 AWS     := aws --endpoint-url=$(or $(AWS_ENDPOINT_URL),http://localhost:4566) --region=$(or $(AWS_DEFAULT_REGION),us-east-1)
 
@@ -26,36 +27,38 @@ teardown:  ## Remove os recursos criados pelo setup
 # ── Dependências ──────────────────────────────────────────────────────────────
 
 install:  ## Cria o ambiente virtual e instala dependências Python
-	python3 -m venv .venv
-	.venv/bin/pip install -r requirements.txt
+	python3 -m venv $(VENV)
+	$(VENV)/bin/pip install -r requirements.txt
 	@echo ""
-	@echo "✅  Dependências instaladas. Ative o ambiente com:"
-	@echo "    source .venv/bin/activate"
+	@echo "✅  Dependências instaladas em $(VENV)/"
 
 # ── Testes ────────────────────────────────────────────────────────────────────
 
-test: up  ## Roda todos os testes (sobe LocalStack se necessário)
+_check-venv:
+	@test -f $(VENV)/bin/python3 || (echo "❌  Ambiente virtual não encontrado. Execute: make install" && exit 1)
+
+test: up _check-venv  ## Roda todos os testes (sobe LocalStack se necessário)
 	@export AWS_ENDPOINT_URL=$${AWS_ENDPOINT_URL:-http://localhost:4566} && \
 	 export AWS_DEFAULT_REGION=$${AWS_DEFAULT_REGION:-us-east-1} && \
 	 export AWS_ACCESS_KEY_ID=$${AWS_ACCESS_KEY_ID:-test} && \
 	 export AWS_SECRET_ACCESS_KEY=$${AWS_SECRET_ACCESS_KEY:-test} && \
 	 $(PYTEST) tests/ -v --tb=short
 
-test-v7: up  ## Roda apenas os testes do fan-out (U1V7)
+test-v7: up _check-venv  ## Roda apenas os testes do fan-out (U1V7)
 	@export AWS_ENDPOINT_URL=$${AWS_ENDPOINT_URL:-http://localhost:4566} && \
 	 export AWS_DEFAULT_REGION=$${AWS_DEFAULT_REGION:-us-east-1} && \
 	 export AWS_ACCESS_KEY_ID=$${AWS_ACCESS_KEY_ID:-test} && \
 	 export AWS_SECRET_ACCESS_KEY=$${AWS_SECRET_ACCESS_KEY:-test} && \
 	 $(PYTEST) tests/test_U1V7_fanout.py -v --tb=short
 
-test-v8: up  ## Roda apenas os testes de idempotência (U1V8)
+test-v8: up _check-venv  ## Roda apenas os testes de idempotência (U1V8)
 	@export AWS_ENDPOINT_URL=$${AWS_ENDPOINT_URL:-http://localhost:4566} && \
 	 export AWS_DEFAULT_REGION=$${AWS_DEFAULT_REGION:-us-east-1} && \
 	 export AWS_ACCESS_KEY_ID=$${AWS_ACCESS_KEY_ID:-test} && \
 	 export AWS_SECRET_ACCESS_KEY=$${AWS_SECRET_ACCESS_KEY:-test} && \
 	 $(PYTEST) tests/test_U1V8_idempotencia.py -v --tb=short
 
-test-v9: up  ## Roda apenas os testes de DLQ (U1V9) — mais lentos (~2min)
+test-v9: up _check-venv  ## Roda apenas os testes de DLQ (U1V9) — mais lentos (~2min)
 	@export AWS_ENDPOINT_URL=$${AWS_ENDPOINT_URL:-http://localhost:4566} && \
 	 export AWS_DEFAULT_REGION=$${AWS_DEFAULT_REGION:-us-east-1} && \
 	 export AWS_ACCESS_KEY_ID=$${AWS_ACCESS_KEY_ID:-test} && \
