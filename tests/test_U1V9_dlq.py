@@ -1,197 +1,256 @@
 """
-Testes da Demo U1V9 — DLQ e Resiliência
+Testes da Demo U1V9 — Dead-Letter Queue (DLQ) e Resiliência
 
-Objetivo: verificar que uma poison message (mensagem que sempre falha)
-é roteada para a DLQ após maxReceiveCount tentativas, sem bloquear
-o processamento de mensagens saudáveis.
+O que estes testes verificam:
+    Uma mensagem que sempre falha (poison message / mensagem envenenada)
+    é roteada para a DLQ após maxReceiveCount tentativas, sem bloquear
+    o processamento das mensagens saudáveis que vêm depois.
 
-Estes testes usam event source mapping (SQS → Lambda) para simular
-o comportamento real de produção, incluindo o ciclo de retry.
+Como estes testes funcionam:
+    Usam event source mapping real (SQS → Lambda) para observar o
+    comportamento do ciclo de retry. Não usam mocks — o SQS de verdade
+    (via LocalStack) executa as tentativas com visibility timeout.
 
-Pré-condição: execute `make up` antes de rodar estes testes.
+Por que estes testes são lentos (~90s cada):
+    Cada teste aguarda 3 tentativas × 10s de visibility timeout antes
+    de a mensagem ser roteada para a DLQ. Isso é intencional — estamos
+    observando o comportamento real, não simulando.
 
-Atenção: estes testes levam ~35s por cenário (3 tentativas × ~10s de
-visibility timeout). Isso é intencional — estamos observando o comportamento
-real do SQS, não simulando com mocks.
+Pré-condição: `make up` (LocalStack rodando).
 """
 import json
 import uuid
 
 import pytest
 
-from tests.helpers import deploy_lambda, wait_until, assert_never
+from tests.helpers import deploy_lambda, make_client, wait_until, assert_never
 
-FUNCTION_NAME = "consumidora-b"
-HANDLER_PATH = "src/U1V9_dlq/consumidora_b.py"
-FILA_PRINCIPAL = "fila-estoque-v9"
-FILA_DLQ = "fila-estoque-v9-dlq"
-VISIBILITY_TIMEOUT = 10  # segundos — controla o intervalo entre tentativas
+# ── Constantes ────────────────────────────────────────────────────────────────
 
+NOME_DA_FUNCAO = "consumidora-b"
+CAMINHO_DO_HANDLER = "src/U1V9_dlq/consumidora_b.py"
+NOME_DA_FILA_PRINCIPAL = "fila-estoque-v9"
+NOME_DA_FILA_MORTA = "fila-estoque-v9-dlq"
 
-# ── Fixtures de módulo ────────────────────────────────────────────────────────
+# Visibility timeout curto para agilizar os testes (produção usaria 30s ou mais).
+# Controla o intervalo entre as tentativas de reprocessamento.
+TEMPO_DE_VISIBILIDADE_EM_SEGUNDOS = 10
+
+# ── Infraestrutura dos testes (fixtures) ──────────────────────────────────────
 
 
 @pytest.fixture(scope="module")
-def filas_v9(sqs) -> dict:
+def fila_com_dlq(sqs) -> dict:
     """
-    Cria a fila principal com DLQ vinculada.
-    maxReceiveCount=3: após 3 recepções com falha, roteia para a DLQ.
-    VisibilityTimeout=10s: intervalo entre as tentativas (curto para testes).
+    Cria a fila principal com a política de reenvio (RedrivePolicy) vinculada
+    à fila morta (DLQ).
+
+    maxReceiveCount=3: a mensagem é roteada para a DLQ na 4ª recepção,
+    após falhar nas 3 primeiras tentativas.
+
+    A RedrivePolicy fica na fila PRINCIPAL — não na DLQ.
+    A DLQ é passiva: ela só recebe o que a fila principal rejeita.
     """
-    dlq_url = sqs.create_queue(QueueName=FILA_DLQ)["QueueUrl"]
-    dlq_arn = sqs.get_queue_attributes(
-        QueueUrl=dlq_url, AttributeNames=["QueueArn"]
+    url_fila_morta = sqs.create_queue(QueueName=NOME_DA_FILA_MORTA)["QueueUrl"]
+    arn_fila_morta = sqs.get_queue_attributes(
+        QueueUrl=url_fila_morta, AttributeNames=["QueueArn"]
     )["Attributes"]["QueueArn"]
 
-    import json as _json
-    redrive = _json.dumps({"deadLetterTargetArn": dlq_arn, "maxReceiveCount": "3"})
-    fila_url = sqs.create_queue(
-        QueueName=FILA_PRINCIPAL,
+    politica_de_reenvio = json.dumps({
+        "deadLetterTargetArn": arn_fila_morta,
+        "maxReceiveCount": "3",
+    })
+
+    url_fila_principal = sqs.create_queue(
+        QueueName=NOME_DA_FILA_PRINCIPAL,
         Attributes={
-            "VisibilityTimeout": str(VISIBILITY_TIMEOUT),
-            "RedrivePolicy": redrive,
+            "VisibilityTimeout": str(TEMPO_DE_VISIBILIDADE_EM_SEGUNDOS),
+            "RedrivePolicy": politica_de_reenvio,
         },
     )["QueueUrl"]
 
-    return {"fila_url": fila_url, "dlq_url": dlq_url}
+    return {
+        "url_fila_principal": url_fila_principal,
+        "url_fila_morta": url_fila_morta,
+    }
 
 
 @pytest.fixture(scope="module")
-def lambda_dlq(lam, filas_v9) -> str:
-    """Deploy da consumidora_b com a falha proposital ativa."""
+def funcao_com_dlq(lam, fila_com_dlq) -> str:
+    """
+    Faz o deploy da consumidora_b.py (com falha proposital ativa) e
+    vincula a fila principal como gatilho via event source mapping.
+    """
     deploy_lambda(
         lambda_client=lam,
-        function_name=FUNCTION_NAME,
-        source_path=HANDLER_PATH,
+        function_name=NOME_DA_FUNCAO,
+        source_path=CAMINHO_DO_HANDLER,
         handler="consumidora_b.lambda_handler",
     )
-
-    fila_arn = _get_queue_arn(lam, filas_v9["fila_url"])
-    _criar_esm(lam, FUNCTION_NAME, fila_arn)
-    return FUNCTION_NAME
+    _vincular_fila_a_lambda(lam, NOME_DA_FUNCAO, fila_com_dlq["url_fila_principal"])
+    return NOME_DA_FUNCAO
 
 
-def _get_queue_arn(lam, fila_url: str) -> str:
-    import boto3, os
-    sqs = boto3.client(
-        "sqs",
-        endpoint_url=os.environ.get("AWS_ENDPOINT_URL", "http://localhost:4566"),
-        region_name="us-east-1",
-        aws_access_key_id="test",
-        aws_secret_access_key="test",
-    )
-    return sqs.get_queue_attributes(
-        QueueUrl=fila_url, AttributeNames=["QueueArn"]
+# ── Funções auxiliares ────────────────────────────────────────────────────────
+
+
+def _obter_arn_da_fila(url_da_fila: str) -> str:
+    """Retorna o ARN de uma fila SQS a partir da URL."""
+    cliente_sqs = make_client("sqs")
+    return cliente_sqs.get_queue_attributes(
+        QueueUrl=url_da_fila, AttributeNames=["QueueArn"]
     )["Attributes"]["QueueArn"]
 
 
-def _criar_esm(lam, function_name: str, fila_arn: str) -> None:
-    """Cria o Event Source Mapping SQS → Lambda."""
+def _vincular_fila_a_lambda(lam, nome_da_funcao: str, url_da_fila: str) -> None:
+    """
+    Cria o Event Source Mapping: o SQS passa a chamar a Lambda
+    automaticamente quando mensagens chegam na fila.
+    BatchSize=1: cada invocação processa uma mensagem por vez,
+    facilitando a observação do ciclo de retry nos logs.
+    """
+    arn_da_fila = _obter_arn_da_fila(url_da_fila)
     try:
         lam.create_event_source_mapping(
-            EventSourceArn=fila_arn,
-            FunctionName=function_name,
+            EventSourceArn=arn_da_fila,
+            FunctionName=nome_da_funcao,
             BatchSize=1,
             Enabled=True,
         )
     except lam.exceptions.ResourceConflictException:
-        pass  # ESM já existe
+        pass  # gatilho já existe — ok em execuções repetidas
 
 
 # ── Testes ────────────────────────────────────────────────────────────────────
 
 
 @pytest.mark.timeout(120)
-def test_poison_message_vai_para_dlq(sqs, filas_v9, lambda_dlq):
+def test_mensagem_envenenada_e_roteada_para_dlq_apos_tres_falhas(sqs, fila_com_dlq, funcao_com_dlq):
     """
-    Uma mensagem com "defeituoso": true deve:
-    1. Ser recebida pela Lambda 3 vezes (maxReceiveCount=3)
-    2. Falhar todas as vezes (RuntimeError)
-    3. Ser roteada para a DLQ na 4ª recepção
+    Uma mensagem com "defeituoso": true deve ser roteada para a DLQ
+    após 3 tentativas de processamento malsucedidas.
 
-    O timeout do teste é 120s para acomodar os 3 ciclos de retry
-    (3 × ~10s de visibility timeout + margem de processamento).
+    Fluxo esperado:
+        Fila → Lambda → RuntimeError → mensagem volta (visibility timeout)
+        Fila → Lambda → RuntimeError → mensagem volta
+        Fila → Lambda → RuntimeError → mensagem volta
+        Fila → DLQ (4ª recepção, maxReceiveCount atingido)
+
+    A poison message sai do caminho — a fila principal fica livre para
+    processar as mensagens que vêm depois.
     """
-    sku = f"SKU-{uuid.uuid4().hex[:8].upper()}"
+    identificador_do_produto = f"SKU-{uuid.uuid4().hex[:8].upper()}"
+
     sqs.send_message(
-        QueueUrl=filas_v9["fila_url"],
-        MessageBody=json.dumps({"sku": sku, "qtd": 1, "defeituoso": True}),
+        QueueUrl=fila_com_dlq["url_fila_principal"],
+        MessageBody=json.dumps({
+            "sku": identificador_do_produto,
+            "qtd": 1,
+            "defeituoso": True,
+        }),
     )
 
-    def mensagem_na_dlq():
-        resp = sqs.receive_message(
-            QueueUrl=filas_v9["dlq_url"],
+    def mensagem_chegou_na_fila_morta():
+        resposta = sqs.receive_message(
+            QueueUrl=fila_com_dlq["url_fila_morta"],
             MaxNumberOfMessages=1,
             VisibilityTimeout=5,
         )
-        return any(sku in m["Body"] for m in resp.get("Messages", []))
+        return any(
+            identificador_do_produto in m["Body"]
+            for m in resposta.get("Messages", [])
+        )
 
     wait_until(
-        mensagem_na_dlq,
+        mensagem_chegou_na_fila_morta,
         timeout=90,
         interval=2,
-        message="poison message não chegou na DLQ no tempo esperado",
+        message="a mensagem envenenada não chegou na DLQ no tempo esperado",
     )
 
 
 @pytest.mark.timeout(120)
-def test_payload_preservado_na_dlq(sqs, filas_v9, lambda_dlq):
+def test_dlq_preserva_o_payload_original_intacto(sqs, fila_com_dlq, funcao_com_dlq):
     """
-    O payload original deve chegar na DLQ intacto — byte a byte.
-    A DLQ não perde dados; ela isola a mensagem problemática para
-    inspeção e possível reprocessamento posterior.
+    O payload que chega na DLQ deve ser idêntico ao que foi enviado
+    originalmente — nenhum campo alterado, nenhum dado perdido.
+
+    Isso é fundamental: a DLQ não é uma lixeira. É um repositório de
+    mensagens para investigação e reprocessamento posterior, quando
+    o problema que causou a falha for corrigido.
     """
-    sku = f"SKU-{uuid.uuid4().hex[:8].upper()}"
-    payload_original = {"sku": sku, "qtd": 5, "defeituoso": True, "origem": "teste-v9"}
+    identificador_do_produto = f"SKU-{uuid.uuid4().hex[:8].upper()}"
+    payload_original = {
+        "sku": identificador_do_produto,
+        "qtd": 5,
+        "defeituoso": True,
+        "origem": "teste-v9",
+    }
+
     sqs.send_message(
-        QueueUrl=filas_v9["fila_url"],
+        QueueUrl=fila_com_dlq["url_fila_principal"],
         MessageBody=json.dumps(payload_original),
     )
 
-    capturado = None
+    payload_recebido_na_dlq = None
 
-    def capturar_dlq():
-        nonlocal capturado
-        resp = sqs.receive_message(
-            QueueUrl=filas_v9["dlq_url"],
+    def encontrar_mensagem_na_fila_morta():
+        nonlocal payload_recebido_na_dlq
+        resposta = sqs.receive_message(
+            QueueUrl=fila_com_dlq["url_fila_morta"],
             MaxNumberOfMessages=10,
             VisibilityTimeout=5,
         )
-        for m in resp.get("Messages", []):
-            if sku in m["Body"]:
-                capturado = json.loads(m["Body"])
+        for mensagem in resposta.get("Messages", []):
+            if identificador_do_produto in mensagem["Body"]:
+                payload_recebido_na_dlq = json.loads(mensagem["Body"])
                 return True
         return False
 
-    wait_until(capturar_dlq, timeout=90, interval=2, message="mensagem não chegou na DLQ")
+    wait_until(
+        encontrar_mensagem_na_fila_morta,
+        timeout=90,
+        interval=2,
+        message="mensagem não chegou na DLQ para validar o payload",
+    )
 
-    assert capturado["sku"] == sku
-    assert capturado["qtd"] == 5
-    assert capturado["origem"] == "teste-v9"
+    assert payload_recebido_na_dlq["sku"] == identificador_do_produto
+    assert payload_recebido_na_dlq["qtd"] == 5
+    assert payload_recebido_na_dlq["origem"] == "teste-v9"
 
 
 @pytest.mark.timeout(30)
-def test_mensagem_saudavel_nao_vai_para_dlq(sqs, filas_v9, lambda_dlq):
+def test_mensagem_valida_nao_e_enviada_para_dlq(sqs, fila_com_dlq, funcao_com_dlq):
     """
-    Uma mensagem sem "defeituoso" não deve ir para a DLQ.
-    Demonstra que a DLQ isola apenas poison messages,
-    sem afetar o fluxo normal.
+    Uma mensagem sem "defeituoso" deve ser processada normalmente
+    e NÃO deve aparecer na DLQ.
+
+    Demonstra que a DLQ isola apenas as mensagens problemáticas.
+    O fluxo normal continua funcionando sem interrupção.
     """
-    sku = f"SKU-{uuid.uuid4().hex[:8].upper()}"
+    identificador_do_produto = f"SKU-{uuid.uuid4().hex[:8].upper()}"
+
     sqs.send_message(
-        QueueUrl=filas_v9["fila_url"],
-        MessageBody=json.dumps({"sku": sku, "qtd": 3}),  # sem "defeituoso"
+        QueueUrl=fila_com_dlq["url_fila_principal"],
+        MessageBody=json.dumps({
+            "sku": identificador_do_produto,
+            "qtd": 3,
+            # sem "defeituoso" — mensagem saudável
+        }),
     )
 
-    def na_dlq():
-        resp = sqs.receive_message(
-            QueueUrl=filas_v9["dlq_url"],
+    def mensagem_saudavel_esta_na_fila_morta():
+        resposta = sqs.receive_message(
+            QueueUrl=fila_com_dlq["url_fila_morta"],
             MaxNumberOfMessages=10,
         )
-        return any(sku in m["Body"] for m in resp.get("Messages", []))
+        return any(
+            identificador_do_produto in m["Body"]
+            for m in resposta.get("Messages", [])
+        )
 
     assert_never(
-        na_dlq,
+        mensagem_saudavel_esta_na_fila_morta,
         duration=15,
-        message="mensagem saudável não deveria ir para a DLQ",
+        message="mensagem saudável não deveria ir para a fila morta (DLQ)",
     )
