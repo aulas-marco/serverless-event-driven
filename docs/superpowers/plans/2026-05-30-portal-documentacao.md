@@ -51,7 +51,7 @@ Cada página termina com (ajustando alvos e `../`):
 ```markdown
 ---
 
-⬅️ [Anterior: Título](caminho-anterior.md) · 📑 [Índice](caminho-para/index.md) · [Próximo: Título](caminho-proximo.md) ➡️
+⬅️ Anterior: Título · 📑 Índice · Próximo: Título ➡️
 ```
 
 Página inicial não tem "Anterior"; última da trilha não tem "Próximo".
@@ -509,7 +509,7 @@ git commit -m "docs(portal): aprofundar, exercícios e remoção dos roteiros an
 
 - [ ] **Step 1: Atualizar `README.md`**
 
-- No topo, logo após a descrição, adicionar: `> 📚 **Portal de documentação:** comece por [docs/index.md](docs/index.md) — trilha didática do zero ao entendimento do código.`
+- No topo, logo após a descrição, adicionar: `> 📚 **Portal de documentação:** comece por docs/index.md — trilha didática do zero ao entendimento do código.`
 - Na seção **Referências**: substituir os links para `docs/roteiros/*` (que não existem mais) pelos novos: `docs/02-demos/u1v7-fan-out.md`, `u1v8-idempotencia.md`, `u1v9-dlq.md`; trocar `docs/aws_builder_walkthrough.md` por `docs/03-aprofundar/aws-builder.md`. Manter os links de architecture/ e adrs/.
 
 Run para localizar os links a trocar: `grep -n "roteiros\|aws_builder_walkthrough" README.md`

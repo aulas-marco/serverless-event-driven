@@ -5,8 +5,8 @@
 Ao terminar esta aula você vai entender **por que** o [SQS](../glossario.md#sqs) pode entregar a mesma mensagem mais de uma vez e **como** usar um `PutItem` condicional no DynamoDB para garantir que cada `messageId` seja processado exatamente uma vez, mesmo sob entrega *at-least-once*.
 
 **Pré-requisitos:**
-- [Fundamentos de SQS](../01-fundamentos/f02-sqs.md) — entrega *at-least-once*, visibilidade de mensagem
-- [Fundamentos de Lambda](../01-fundamentos/f03-lambda.md) — `lambda_handler`, ciclo de invocação
+- [Os Quatro Serviços](../01-fundamentos/3-os-quatro-servicos.md) — SQS: entrega *at-least-once*, visibilidade de mensagem
+- [Serverless e Lambda](../01-fundamentos/1-serverless-e-lambda.md) — `lambda_handler`, ciclo de invocação
 
 ---
 

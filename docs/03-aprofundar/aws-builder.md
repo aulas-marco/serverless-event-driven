@@ -90,7 +90,7 @@ assert mensagem_na_fila_notificacao()
 Cada classe encapsula:
 
 - **Criação de recursos** — chamadas boto3 isoladas
-- **Configuração** — EntregaMensagemPura, PolíticaReenvio, [TTL](../glossario.md#ttl--time-to-live), etc.
+- **Configuração** — `RawMessageDelivery`, `RedrivePolicy`, [TTL](../glossario.md#ttl--time-to-live), etc.
 - **Interface clara** — métodos com nomes de negócio, não infraestrutura
 
 ---

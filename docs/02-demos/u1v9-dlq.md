@@ -5,8 +5,8 @@
 Ao terminar esta aula você vai entender **por que** uma mensagem "venenosa" pode travar uma fila inteira e **como** a [DLQ](../glossario.md#dlq) isola automaticamente essas mensagens após um número configurável de tentativas, liberando a fila principal para continuar processando.
 
 **Pré-requisitos:**
-- [Fundamentos de SQS](../01-fundamentos/f02-sqs.md) — visibility timeout, at-least-once delivery
-- [Fundamentos de Lambda](../01-fundamentos/f03-lambda.md) — `lambda_handler`, ciclo de invocação e tratamento de erros
+- [Os Quatro Serviços](../01-fundamentos/3-os-quatro-servicos.md) — SQS: visibility timeout, at-least-once delivery
+- [Serverless e Lambda](../01-fundamentos/1-serverless-e-lambda.md) — `lambda_handler`, ciclo de invocação e tratamento de erros
 
 ---
 
