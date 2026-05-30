@@ -204,7 +204,7 @@ Pontos importantes da infraestrutura:
 - **Chave primária**: `messageId` (tipo `S` — String), `KeyType: HASH`. Não há sort key — o `messageId` identifica unicamente cada registro de controle.
 - **[TTL](../glossario.md#ttl)**: `AttributeName: expira_em`, `Enabled: true`. O DynamoDB apaga automaticamente os registros após o timestamp Unix configurado no campo `expira_em`. Sem isso, a tabela cresceria indefinidamente — cada mensagem processada deixaria um registro para sempre.
 - **`BillingMode: PAY_PER_REQUEST`**: cobrança por operação, sem capacidade provisionada. Adequado para cargas variáveis.
-- **`DynamoDBCrudPolicy`**: política gerenciada do [SAM](../glossario.md) que concede `GetItem`, `PutItem`, `UpdateItem`, `DeleteItem`, `BatchGetItem`, `BatchWriteItem`, `Query`, `Scan` na tabela. O `PutItem` condicional está incluído.
+- **`DynamoDBCrudPolicy`**: política gerenciada do SAM que concede `GetItem`, `PutItem`, `UpdateItem`, `DeleteItem`, `BatchGetItem`, `BatchWriteItem`, `Query`, `Scan` na tabela. O `PutItem` condicional está incluído.
 
 ---
 
