@@ -12,4 +12,4 @@ Acesse [`../architecture/README.md`](../architecture/README.md) para ver:
 
 ---
 
-⬅️ [Anterior: U1V9 — Dead-Letter Queue](../02-demos/u1v9-dlq.md) · 📑 [Índice](../index.md) · [Próximo: aws-builder.py](aws-builder.md) ➡️
+⬅️ [Anterior: U1V9 — Dead-Letter Queue](../02-demos/u1v9-dlq.md) · 📑 [Índice](../index.md) · [Próximo: O padrão aws_builder.py](aws-builder.md) ➡️

@@ -8,7 +8,7 @@ Não precisa ser especialista em AWS — a trilha constrói esse conhecimento ao
 | Ferramenta | Versão | Para quê |
 |---|---|---|
 | Docker | recente | Subir o LocalStack |
-| Python | 3.12 | Rodar os testes |
+| Python | 3.12 ou 3.13 | Rodar os testes (o `make install` usa 3.13 se disponível; o runtime Lambda no `template.yaml` é 3.12) |
 | make | qualquer | Atalhos de comando (pré-instalado no Mac via Xcode CLI Tools) |
 | AWS CLI v2 | recente | Inspecionar recursos via terminal |
 | SAM CLI | recente | Deploy na AWS Real (opcional) |

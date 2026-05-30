@@ -186,9 +186,11 @@ Após a terceira falha (quarta recepção interna do [SQS](../glossario.md#sqs))
 4. SQS entrega (2ª vez) → mesma sequência → ApproximateReceiveCount = 2
 
 5. SQS entrega (3ª vez) → mesma sequência → ApproximateReceiveCount = 3
+   └─ 3ª falha: a Lambda já foi invocada 3 vezes (= maxReceiveCount)
 
-6. ApproximateReceiveCount >= maxReceiveCount (3)
-   └─► SQS move mensagem para FilaEstoqueDLQ
+6. Visibility timeout expira → 4ª recepção interna do SQS
+   └─► ReceiveCount (4) ultrapassa maxReceiveCount (3)
+   └─► SQS move a mensagem para FilaEstoqueDLQ — sem invocar a Lambda
 
 7. FilaEstoque: mensagem removida → fila livre para mensagens saudáveis
    FilaEstoqueDLQ: mensagem retida por 1209600s (14 dias)

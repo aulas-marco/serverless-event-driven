@@ -64,7 +64,7 @@ Este portal é o guia de estudo do curso **IEC EAD — Serverless Computing e Ar
 |---|---|---|
 | **U1V7** | Distribuição em leque publicar/inscrever | SNS → SQS → Lambda |
 | **U1V8** | Idempotência pelo menos uma vez | SQS → Lambda → DynamoDB |
-| **U1V9** | Fila de Mensagens Mortas | SQS + FMM → Lambda |
+| **U1V9** | Fila de Mensagens Mortas (DLQ) | SQS + DLQ → Lambda |
 
 ---
 

@@ -16,7 +16,7 @@ serverless-event-driven/
 │   ├── U1V8_idempotencia/
 │   │   └── processa_pedido.py # Escrita condicional (idempotência)
 │   └── U1V9_dlq/
-│       └── consumidora_b.py   # Falha proposital → ciclo FMM
+│       └── consumidora_b.py   # Falha proposital → ciclo DLQ
 ├── infra/
 │   ├── template.yaml          # Modelo SAM — infraestrutura como código
 │   └── scripts/
@@ -24,7 +24,7 @@ serverless-event-driven/
 │       ├── teardown.sh        # Remove recursos
 │       └── wait-localstack.sh # Verificação de saúde (varredura, nunca suspensão)
 ├── tests/
-│   ├── helpers.py             # esperar_até, implantar_lambda, criar_cliente
+│   ├── helpers.py             # wait_until, deploy_lambda, make_client
 │   ├── conftest.py            # Acessórios de sessão
 │   ├── test_U1V7_fanout.py
 │   ├── test_U1V8_idempotencia.py

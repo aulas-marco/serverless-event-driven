@@ -111,7 +111,7 @@ Se está reutilizando este projeto em aulas:
 1. Mostre o [Glossário](../glossario.md) aos alunos — é a fonte única de siglas
 2. Explique a diferença entre "configuração" (`aws_builder.py`) e "teste" (`test_*.py`)
 3. Estude as classes `TopologiaFanout`, `ProcessadorDePedidos`, `FilaComDlq` como exemplos de *padrão construtor*
-4. Use `tests/helpers.py` (`esperar_até`, `implantar_lambda`) como padrões para testes robustos
+4. Use `tests/helpers.py` (`wait_until`, `deploy_lambda`) como padrões para testes robustos
 5. O [ESM](../glossario.md#esm--event-source-mapping) (Event Source Mapping) é o mecanismo que faz o SQS invocar a Lambda automaticamente — declarado nas classes `TopologiaFanout` e `FilaComDlq`
 
 ---
