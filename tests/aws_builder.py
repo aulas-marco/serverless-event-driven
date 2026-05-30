@@ -593,3 +593,30 @@ class ProjecaoSaldo:
         """Retorna o saldo projetado para a conta ou Decimal('0') se não existir."""
         from src.U2_event_sourcing.projecao import obter_saldo
         return obter_saldo(conta_id, dynamodb_resource=self._dynamodb)
+
+
+# ── U3 — IA classificando eventos ─────────────────────────────────────────────
+
+
+class FilasEDeCacheU3:
+    """Provisiona as filas SQS e a tabela de cache do classificador (U3V9)."""
+
+    FILAS = ["emails-entrada", "alta-prioridade", "baixa-prioridade", "sem-classificacao"]
+    NOME_TABELA = "classificacoes"
+
+    def __init__(self, sqs, dynamodb):
+        self.urls = {nome: sqs.create_queue(QueueName=nome)["QueueUrl"] for nome in self.FILAS}
+        existentes = dynamodb.meta.client.list_tables()["TableNames"]
+        if self.NOME_TABELA not in existentes:
+            t = dynamodb.create_table(
+                TableName=self.NOME_TABELA,
+                AttributeDefinitions=[{"AttributeName": "hash_texto", "AttributeType": "S"}],
+                KeySchema=[{"AttributeName": "hash_texto", "KeyType": "HASH"}],
+                BillingMode="PAY_PER_REQUEST",
+            )
+            t.wait_until_exists()
+        self.tabela = dynamodb.Table(self.NOME_TABELA)
+
+    def receber(self, sqs, fila: str) -> list:
+        resp = sqs.receive_message(QueueUrl=self.urls[fila], MaxNumberOfMessages=10, WaitTimeSeconds=1)
+        return resp.get("Messages", [])
