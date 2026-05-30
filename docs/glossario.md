@@ -45,3 +45,7 @@ Vínculo que faz o SQS invocar uma Lambda automaticamente quando mensagens chega
 ### TTL — Time to Live
 
 Campo de timestamp (epoch Unix) que o DynamoDB usa para apagar registros automaticamente após a data configurada. Útil para tabelas de controle que não devem crescer indefinidamente.
+
+---
+
+⬅️ [Anterior: Exercícios](exercicios.md) · 📑 [Índice](index.md)

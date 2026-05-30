@@ -48,8 +48,6 @@ flowchart LR
     T -- "assinatura\nRawMessageDelivery=true" --> Q2
     Q1 -- "event source mapping" --> B
     Q2 -- "event source mapping" --> C
-
-    style Fan-out fill:#fff3cd,stroke:#ffc107
 ```
 
 > **O fan-out não está no código do produtor.** Ele está nas duas assinaturas SNS→SQS configuradas no template. O produtor faz **uma** chamada `publish`; o SNS entrega **duas** cópias.
