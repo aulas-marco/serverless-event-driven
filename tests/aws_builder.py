@@ -399,3 +399,44 @@ def _cliente_sqs_auxiliar():
         kwargs["aws_access_key_id"] = "test"
         kwargs["aws_secret_access_key"] = "test"
     return boto3.client("sqs", **kwargs)
+
+
+# ── U2 — Event Sourcing ───────────────────────────────────────────────────────
+
+
+class ContaBancariaEventStore:
+    """
+    Provisiona a tabela `eventos` (append-only, com DynamoDB Streams) para os
+    testes de Event Sourcing. Expõe o nome da tabela; a lógica de negócio vive
+    em src/U2_event_sourcing/.
+    """
+
+    NOME_TABELA = "eventos"
+
+    def __init__(self, dynamodb):
+        self._dynamodb = dynamodb
+        self._criar_se_nao_existe()
+
+    def _criar_se_nao_existe(self):
+        existentes = self._dynamodb.meta.client.list_tables()["TableNames"]
+        if self.NOME_TABELA in existentes:
+            self.tabela = self._dynamodb.Table(self.NOME_TABELA)
+            return
+        self.tabela = self._dynamodb.create_table(
+            TableName=self.NOME_TABELA,
+            AttributeDefinitions=[
+                {"AttributeName": "aggregate_id", "AttributeType": "S"},
+                {"AttributeName": "sequencia", "AttributeType": "N"},
+            ],
+            KeySchema=[
+                {"AttributeName": "aggregate_id", "KeyType": "HASH"},
+                {"AttributeName": "sequencia", "KeyType": "RANGE"},
+            ],
+            BillingMode="PAY_PER_REQUEST",
+            StreamSpecification={"StreamEnabled": True, "StreamViewType": "NEW_IMAGE"},
+        )
+        self.tabela.wait_until_exists()
+
+    def arn_do_stream(self) -> str:
+        desc = self._dynamodb.meta.client.describe_table(TableName=self.NOME_TABELA)
+        return desc["Table"]["LatestStreamArn"]

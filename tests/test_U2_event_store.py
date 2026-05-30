@@ -35,3 +35,38 @@ def test_conta_sem_eventos_nao_existe():
     conta = ContaBancaria.reconstruir([])
     assert conta.existe is False
     assert conta.saldo == Decimal("0")
+
+
+import uuid
+import pytest
+from tests.aws_builder import ContaBancariaEventStore
+from src.U2_event_sourcing.repositorio import EventStore
+
+
+@pytest.fixture(scope="module")
+def event_store_table(dynamodb_resource):
+    return ContaBancariaEventStore(dynamodb_resource)
+
+
+def test_append_grava_em_sequencia_crescente_e_carrega_ordenado(event_store_table, dynamodb_resource):
+    store = EventStore(dynamodb_resource)
+    conta_id = f"conta-{uuid.uuid4()}"
+
+    s1 = store.append(conta_id, ContaCriada(aggregate_id=conta_id))
+    s2 = store.append(conta_id, DepositoRealizado(aggregate_id=conta_id, valor=Decimal("100")))
+
+    assert (s1, s2) == (1, 2)
+    eventos = store.carregar_por_agregado(conta_id)
+    assert [type(e).__name__ for e in eventos] == ["ContaCriada", "DepositoRealizado"]
+
+
+def test_append_e_idempotente_por_sequencia_condicional(event_store_table, dynamodb_resource):
+    """Gravar na mesma sequência de novo deve falhar (append-only protegido)."""
+    from botocore.exceptions import ClientError
+    store = EventStore(dynamodb_resource)
+    conta_id = f"conta-{uuid.uuid4()}"
+    store.append(conta_id, ContaCriada(aggregate_id=conta_id))
+
+    with pytest.raises(ClientError) as exc:
+        store._gravar_em_sequencia(conta_id, DepositoRealizado(aggregate_id=conta_id, valor=Decimal("1")), sequencia=1)
+    assert exc.value.response["Error"]["Code"] == "ConditionalCheckFailedException"
