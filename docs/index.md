@@ -1,6 +1,15 @@
 # Portal de Documentação — Serverless Event-Driven
 
-Este portal é o guia de estudo do curso **IEC EAD — Serverless Computing e Arquiteturas Event-Driven** (PUC Minas / IEC): aqui você encontra contexto, código e trilha de aprendizagem para as demos U1V7, U1V8 e U1V9.
+Este portal é o guia de estudo do curso **IEC EAD — Serverless Computing e Arquiteturas Event-Driven** (PUC Minas / IEC): contexto, código e trilha de aprendizagem, com todo trecho de código fiel ao que está em `src/`.
+
+---
+
+## Unidades do curso
+
+- **Unidade 1 — Serverless, Eventos e Mensageria** (esta trilha, abaixo): fan-out, idempotência e DLQ com Lambda + SNS + SQS + DynamoDB (demos U1V7, U1V8, U1V9).
+- **Unidade 2 — [Event Sourcing e CQRS](unidade-2/index.md)**: event store append-only, replay/snapshots e projeção via DynamoDB Streams (demos U2V7, U2V8, U2V9).
+
+A Unidade 1 abaixo é o ponto de partida; a [Unidade 2](unidade-2/index.md) tem sua própria trilha.
 
 ---
 
