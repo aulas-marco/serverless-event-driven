@@ -55,6 +55,23 @@ def _obter_arn_da_fila(sqs, url_da_fila: str) -> str:
     )["Attributes"]["QueueArn"]
 
 
+def _aguardar_sem_conflito(lam, nome_da_funcao: str, timeout: float = 30.0) -> None:
+    """
+    Aguarda a função Lambda sair de estado de atualização pendente (LastUpdateStatus
+    != InProgress), para que chamadas subsequentes como update_function_configuration
+    não falhem com ResourceConflictException.
+    """
+    import time
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        cfg = lam.get_function(FunctionName=nome_da_funcao)["Configuration"]
+        status = cfg.get("LastUpdateStatus", "Successful")
+        if status != "InProgress":
+            return
+        time.sleep(1)
+    raise TimeoutError(f"Lambda '{nome_da_funcao}' não saiu do estado InProgress (timeout={timeout}s)")
+
+
 def _criar_esm(lam, nome_da_funcao: str, arn_da_fila: str) -> None:
     """
     Cria o Event Source Mapping (ESM): vínculo SQS → Lambda.
@@ -460,3 +477,136 @@ class TabelaSnapshots:
             BillingMode="PAY_PER_REQUEST",
         )
         self.tabela.wait_until_exists()
+
+
+# ── U2 — Projeção CQRS via DynamoDB Streams ──────────────────────────────────
+
+
+class ProjecaoSaldo:
+    """
+    Provisiona a tabela de leitura `saldo_atual` e a Lambda `projecao-saldo`,
+    que é acionada automaticamente pelo DynamoDB Streams da tabela `eventos`.
+
+    Uso:
+        store = ContaBancariaEventStore(dynamodb_resource)
+        projecao = ProjecaoSaldo(dynamodb_resource, lam)
+        # a partir daqui, eventos gravados em `eventos` propagam para `saldo_atual`
+    """
+
+    NOME_TABELA = "saldo_atual"
+    NOME_FUNCAO = "projecao-saldo"
+    HANDLER = "projecao.lambda_handler"
+    CAMINHO = "src/U2_event_sourcing/projecao.py"
+
+    def __init__(self, dynamodb, lam):
+        import os
+        self._dynamodb = dynamodb
+        self._lam = lam
+        self._endpoint = os.environ.get("AWS_ENDPOINT_URL", "http://localhost:4566")
+        # Dentro do container Lambda, `localhost` aponta para o próprio container,
+        # não para o LocalStack. Detectamos o IP real do container LocalStack via
+        # Docker para que a Lambda consiga alcançar o DynamoDB.
+        self._endpoint_interno = self._endpoint_localstack_interno()
+
+        self._criar_tabela_saldo_se_nao_existe()
+        self._deploy_lambda()
+        self._criar_esm_stream()
+
+    @staticmethod
+    def _endpoint_localstack_interno() -> str:
+        """
+        Retorna o endpoint que a Lambda (container Docker) deve usar para alcançar
+        o LocalStack. Se o LocalStack estiver rodando como container Docker no
+        mesmo host, usa o IP do container. Caso contrário, retorna o endpoint padrão.
+        """
+        import subprocess, os
+        endpoint_externo = os.environ.get("AWS_ENDPOINT_URL", "http://localhost:4566")
+        try:
+            resultado = subprocess.run(
+                ["docker", "inspect",
+                 "--format", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}",
+                 "serverless-event-driven-localstack-1"],
+                capture_output=True, text=True, timeout=5
+            )
+            ip = resultado.stdout.strip().split("\n")[0]
+            if ip:
+                # Extrai a porta do endpoint externo
+                from urllib.parse import urlparse
+                porta = urlparse(endpoint_externo).port or 4566
+                return f"http://{ip}:{porta}"
+        except Exception:
+            pass
+        return endpoint_externo
+
+    def _criar_tabela_saldo_se_nao_existe(self):
+        existentes = self._dynamodb.meta.client.list_tables()["TableNames"]
+        if self.NOME_TABELA in existentes:
+            self.tabela = self._dynamodb.Table(self.NOME_TABELA)
+            return
+        self.tabela = self._dynamodb.create_table(
+            TableName=self.NOME_TABELA,
+            AttributeDefinitions=[{"AttributeName": "conta_id", "AttributeType": "S"}],
+            KeySchema=[{"AttributeName": "conta_id", "KeyType": "HASH"}],
+            BillingMode="PAY_PER_REQUEST",
+        )
+        self.tabela.wait_until_exists()
+
+    def _deploy_lambda(self):
+        env_vars = {
+            "TABELA_SALDO": self.NOME_TABELA,
+            "AWS_ENDPOINT_URL": self._endpoint_interno,
+        }
+        # Remove a função existente para garantir que o novo container suba com
+        # o endpoint correto (LocalStack recicla containers; o antigo teria localhost).
+        try:
+            self._lam.delete_function(FunctionName=self.NOME_FUNCAO)
+            import time
+            time.sleep(2)  # aguarda exclusão propagar no LocalStack
+        except self._lam.exceptions.ResourceNotFoundException:
+            pass  # não existia — tudo bem
+
+        deploy_lambda(
+            lambda_client=self._lam,
+            function_name=self.NOME_FUNCAO,
+            source_path=self.CAMINHO,
+            handler=self.HANDLER,
+            env_vars=env_vars,
+        )
+
+    def _criar_esm_stream(self):
+        """Cria o Event Source Mapping: DynamoDB Stream → Lambda `projecao-saldo`."""
+        import time
+        # A tabela `eventos` deve existir com Streams — ContaBancariaEventStore garante isso
+        arn_stream = ContaBancariaEventStore(self._dynamodb).arn_do_stream()
+
+        # Remove ESMs órfãos para a mesma source (podem ter ficado após delete_function)
+        esms_existentes = self._lam.list_event_source_mappings(
+            EventSourceArn=arn_stream
+        ).get("EventSourceMappings", [])
+        for esm in esms_existentes:
+            try:
+                self._lam.delete_event_source_mapping(UUID=esm["UUID"])
+            except Exception:
+                pass  # já removido ou sem permissão — segue em frente
+
+        # Aguarda todos os ESMs anteriores serem removidos antes de criar o novo
+        if esms_existentes:
+            time.sleep(3)
+
+        self._lam.create_event_source_mapping(
+            EventSourceArn=arn_stream,
+            FunctionName=self.NOME_FUNCAO,
+            StartingPosition="LATEST",
+            BatchSize=1,
+            Enabled=True,
+        )
+
+        # Aguarda o poller do LocalStack se inicializar antes de retornar.
+        # Sem esse delay, eventos escritos imediatamente após a criação do ESM
+        # podem ser perdidos porque o poller ainda não está ativo.
+        time.sleep(5)
+
+    def saldo(self, conta_id: str):
+        """Retorna o saldo projetado para a conta ou Decimal('0') se não existir."""
+        from src.U2_event_sourcing.projecao import obter_saldo
+        return obter_saldo(conta_id, dynamodb_resource=self._dynamodb)
