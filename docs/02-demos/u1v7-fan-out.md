@@ -238,7 +238,7 @@ Com `false`, o consumidor precisa de `json.loads(record['body'])['Message']` par
 - [ ] Quantas chamadas `_sns.publish` o `produtor.py` faz para acionar dois consumidores?
 - [ ] Onde está definido o fan-out: no código Python ou no `template.yaml`?
 - [ ] O que acontece se a `PoliticaFilas` for removida do template?
-- [ ] Qual recurso [SAM](../glossario.md#sam)/[CloudFormation](../glossario.md#cloudformation) autoriza o SNS a escrever nas filas SQS?
+- [ ] Qual recurso SAM/CloudFormation autoriza o SNS a escrever nas filas SQS?
 - [ ] O que `RawMessageDelivery: true` muda no conteúdo de `record['body']` no consumidor?
 - [ ] Por que `estoque.py` e `notificacao.py` têm estruturas idênticas? O que isso demonstra sobre desacoplamento?
 
