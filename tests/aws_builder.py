@@ -55,23 +55,6 @@ def _obter_arn_da_fila(sqs, url_da_fila: str) -> str:
     )["Attributes"]["QueueArn"]
 
 
-def _aguardar_sem_conflito(lam, nome_da_funcao: str, timeout: float = 30.0) -> None:
-    """
-    Aguarda a função Lambda sair de estado de atualização pendente (LastUpdateStatus
-    != InProgress), para que chamadas subsequentes como update_function_configuration
-    não falhem com ResourceConflictException.
-    """
-    import time
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        cfg = lam.get_function(FunctionName=nome_da_funcao)["Configuration"]
-        status = cfg.get("LastUpdateStatus", "Successful")
-        if status != "InProgress":
-            return
-        time.sleep(1)
-    raise TimeoutError(f"Lambda '{nome_da_funcao}' não saiu do estado InProgress (timeout={timeout}s)")
-
-
 def _criar_esm(lam, nome_da_funcao: str, arn_da_fila: str) -> None:
     """
     Cria o Event Source Mapping (ESM): vínculo SQS → Lambda.

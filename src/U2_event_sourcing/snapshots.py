@@ -3,7 +3,6 @@ import os
 from decimal import Decimal
 
 import boto3
-from boto3.dynamodb.conditions import Key
 
 from src.U2_event_sourcing.conta import ContaBancaria
 
