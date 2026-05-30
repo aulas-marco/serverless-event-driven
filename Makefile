@@ -7,9 +7,10 @@ AWS     := aws --endpoint-url=$(or $(AWS_ENDPOINT_URL),http://localhost:4566) --
 
 # ── Ambiente ──────────────────────────────────────────────────────────────────
 
-up:  ## Sobe o LocalStack e aguarda estar pronto
+up:  ## Sobe LocalStack + Kafka e aguarda estarem prontos
 	docker compose up -d
 	@bash infra/scripts/wait-localstack.sh
+	@bash infra/scripts/wait-kafka.sh
 
 down:  ## Para e remove o container LocalStack
 	docker compose down
