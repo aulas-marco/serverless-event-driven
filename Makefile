@@ -1,4 +1,4 @@
-.PHONY: up down setup test test-v7 test-v8 test-v9 test-u2 clean lint help
+.PHONY: up down setup test test-v7 test-v8 test-v9 test-u2 test-u3 clean lint help
 
 VENV    := .venv
 PYTHON  := $(VENV)/bin/python3
@@ -73,6 +73,13 @@ test-u2: up _check-venv  ## Roda apenas os testes da Unidade 2 (Event Sourcing +
 	 export AWS_ACCESS_KEY_ID=$${AWS_ACCESS_KEY_ID:-test} && \
 	 export AWS_SECRET_ACCESS_KEY=$${AWS_SECRET_ACCESS_KEY:-test} && \
 	 $(PYTEST) tests/test_U2_event_store.py tests/test_U2_replay_snapshots.py tests/test_U2_cqrs_projecao.py -v --tb=short
+
+test-u3: up _check-venv  ## Roda apenas os testes da Unidade 3 (Kafka + IA)
+	@export AWS_ENDPOINT_URL=$${AWS_ENDPOINT_URL:-http://localhost:4566} && \
+	 export AWS_DEFAULT_REGION=$${AWS_DEFAULT_REGION:-us-east-1} && \
+	 export AWS_ACCESS_KEY_ID=$${AWS_ACCESS_KEY_ID:-test} && \
+	 export AWS_SECRET_ACCESS_KEY=$${AWS_SECRET_ACCESS_KEY:-test} && \
+	 $(PYTEST) tests/test_U3_kafka_produtor.py tests/test_U3_kafka_consumidor.py tests/test_U3_ia_classificador.py -v --tb=short
 
 # ── Deploy AWS Real ───────────────────────────────────────────────────────────
 

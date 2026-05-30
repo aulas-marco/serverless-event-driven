@@ -236,3 +236,69 @@ Resources:
             Stream: !GetAtt TabelaEventos.StreamArn
             StartingPosition: LATEST
             BatchSize: 1
+
+# ─────────────────────────────────────────────────────────────────────────────
+# U3V9 — IA classificando eventos
+# ─────────────────────────────────────────────────────────────────────────────
+
+  FilaEmailsEntrada:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: emails-entrada
+
+  FilaAltaPrioridade:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: alta-prioridade
+
+  FilaBaixaPrioridade:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: baixa-prioridade
+
+  FilaSemClassificacao:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: sem-classificacao
+
+  TabelaClassificacoes:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: classificacoes
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: hash_texto
+          AttributeType: S
+      KeySchema:
+        - AttributeName: hash_texto
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expira_em
+        Enabled: true
+
+  ClassificadorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: classificador
+      Handler: classificador.lambda_handler
+      CodeUri: ../src/U3_ia/
+      Timeout: 30
+      Environment:
+        Variables:
+          TABELA_CACHE: !Ref TabelaClassificacoes
+          ANTHROPIC_API_KEY: ""
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TabelaClassificacoes
+        - SQSSendMessagePolicy:
+            QueueName: alta-prioridade
+        - SQSSendMessagePolicy:
+            QueueName: baixa-prioridade
+        - SQSSendMessagePolicy:
+            QueueName: sem-classificacao
+      Events:
+        FilaEntrada:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt FilaEmailsEntrada.Arn
+            BatchSize: 1
