@@ -70,3 +70,26 @@ def test_append_e_idempotente_por_sequencia_condicional(event_store_table, dynam
     with pytest.raises(ClientError) as exc:
         store._gravar_em_sequencia(conta_id, DepositoRealizado(aggregate_id=conta_id, valor=Decimal("1")), sequencia=1)
     assert exc.value.response["Error"]["Code"] == "ConditionalCheckFailedException"
+
+
+from src.U2_event_sourcing.comandos import depositar, sacar, SaldoInsuficiente
+
+
+def test_depositar_e_sacar_atualizam_o_saldo_reconstruido(event_store_table, dynamodb_resource):
+    store = EventStore(dynamodb_resource)
+    conta_id = f"conta-{uuid.uuid4()}"
+
+    depositar(store, conta_id, Decimal("200"))
+    sacar(store, conta_id, Decimal("50"))
+
+    conta = ContaBancaria.reconstruir(store.carregar_por_agregado(conta_id))
+    assert conta.saldo == Decimal("150")
+
+
+def test_sacar_alem_do_saldo_levanta_saldo_insuficiente(event_store_table, dynamodb_resource):
+    store = EventStore(dynamodb_resource)
+    conta_id = f"conta-{uuid.uuid4()}"
+    depositar(store, conta_id, Decimal("10"))
+
+    with pytest.raises(SaldoInsuficiente):
+        sacar(store, conta_id, Decimal("999"))
