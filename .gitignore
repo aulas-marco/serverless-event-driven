@@ -8,3 +8,6 @@ build/
 .env
 *.zip
 .DS_Store
+
+# Artefatos de planejamento (specs/planos superpowers) — não versionar
+docs/superpowers/
