@@ -170,3 +170,69 @@ Resources:
           Properties:
             Queue: !GetAtt FilaEstoque.Arn
             BatchSize: 1  # 1 por vez: facilita observar o ciclo de retry no log
+
+# ─────────────────────────────────────────────────────────────────────────────
+# U2 — Event Sourcing + CQRS
+# ─────────────────────────────────────────────────────────────────────────────
+
+  TabelaEventos:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: eventos
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: aggregate_id
+          AttributeType: S
+        - AttributeName: sequencia
+          AttributeType: N
+      KeySchema:
+        - AttributeName: aggregate_id
+          KeyType: HASH
+        - AttributeName: sequencia
+          KeyType: RANGE
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
+
+  TabelaSaldoAtual:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: saldo_atual
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: conta_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: conta_id
+          KeyType: HASH
+
+  TabelaSnapshots:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: snapshots
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: aggregate_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: aggregate_id
+          KeyType: HASH
+
+  ProjecaoSaldoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: projecao-saldo
+      Handler: projecao.lambda_handler
+      CodeUri: ../src/U2_event_sourcing/
+      Environment:
+        Variables:
+          TABELA_SALDO: !Ref TabelaSaldoAtual
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TabelaSaldoAtual
+      Events:
+        StreamEventos:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt TabelaEventos.StreamArn
+            StartingPosition: LATEST
+            BatchSize: 1
