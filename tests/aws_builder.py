@@ -440,3 +440,23 @@ class ContaBancariaEventStore:
     def arn_do_stream(self) -> str:
         desc = self._dynamodb.meta.client.describe_table(TableName=self.NOME_TABELA)
         return desc["Table"]["LatestStreamArn"]
+
+
+class TabelaSnapshots:
+    """Provisiona a tabela `snapshots` (PK aggregate_id) para os testes de replay."""
+
+    NOME_TABELA = "snapshots"
+
+    def __init__(self, dynamodb):
+        self._dynamodb = dynamodb
+        existentes = dynamodb.meta.client.list_tables()["TableNames"]
+        if self.NOME_TABELA in existentes:
+            self.tabela = dynamodb.Table(self.NOME_TABELA)
+            return
+        self.tabela = dynamodb.create_table(
+            TableName=self.NOME_TABELA,
+            AttributeDefinitions=[{"AttributeName": "aggregate_id", "AttributeType": "S"}],
+            KeySchema=[{"AttributeName": "aggregate_id", "KeyType": "HASH"}],
+            BillingMode="PAY_PER_REQUEST",
+        )
+        self.tabela.wait_until_exists()
