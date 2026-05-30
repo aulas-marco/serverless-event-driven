@@ -198,7 +198,7 @@ Após a terceira falha (quarta recepção interna do [SQS](../glossario.md#sqs))
 
 ---
 
-## 8. Pegadinhas
+## 8. Pontos de Atenção
 
 ### Fingir sucesso perde a mensagem
 

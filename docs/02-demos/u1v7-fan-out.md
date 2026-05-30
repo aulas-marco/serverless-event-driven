@@ -199,7 +199,7 @@ O fan-out vive no `template.yaml`, não no código. Há três recursos que traba
                 aws:SourceArn: !Ref TopicoPedidos
 ```
 
-> ⚠️ **Pegadinha** — sem a `PoliticaFilas`, o [SNS](../glossario.md#sns) não consegue entregar nas filas [SQS](../glossario.md#sqs). O `publish` vai retornar sucesso (o tópico aceitou a mensagem), mas as filas nunca receberão nada — e nenhuma exceção será lançada. A política `sqs:SendMessage` com condição `ArnEquals: aws:SourceArn: !Ref TopicoPedidos` é obrigatória.
+> ⚠️ **Ponto de Atenção** — sem a `PoliticaFilas`, o [SNS](../glossario.md#sns) não consegue entregar nas filas [SQS](../glossario.md#sqs). O `publish` vai retornar sucesso (o tópico aceitou a mensagem), mas as filas nunca receberão nada — e nenhuma exceção será lançada. A política `sqs:SendMessage` com condição `ArnEquals: aws:SourceArn: !Ref TopicoPedidos` é obrigatória.
 
 ---
 
@@ -218,7 +218,7 @@ O teste valida:
 
 ---
 
-## 7. Pegadinhas
+## 7. Pontos de Atenção
 
 **O fan-out não está no código do produtor** — está nas assinaturas. Se você ler apenas `produtor.py`, vai ver uma única chamada `_sns.publish`. O roteamento para múltiplas filas é configuração de infraestrutura (`AssinaturaEstoque`, `AssinaturaNotificacao`), não lógica de aplicação.
 

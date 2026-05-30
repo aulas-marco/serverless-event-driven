@@ -141,7 +141,7 @@ def _processar_pedido(pedido: dict) -> None:
 
 ---
 
-## 5. A pegadinha da race condition
+## 5. O ponto de atenção da race condition
 
 A docstring de `_reivindicar` mostra por que a abordagem ingênua com `GetItem + PutItem` separados não funciona:
 
@@ -231,7 +231,7 @@ Ao rodar `make test-v8`, observe no log:
 
 ---
 
-## 8. Pegadinhas
+## 8. Pontos de Atenção
 
 ### A `ConditionalCheckFailedException` não pode vazar
 

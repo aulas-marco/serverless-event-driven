@@ -27,7 +27,7 @@ Quando terminar você verá algo como:
 ✅  Dependências instaladas em .venv/ — Python 3.x
 ```
 
-> ⚠️ **Pegadinha**
+> ⚠️ **Ponto de Atenção**
 >
 > Você **não precisa** rodar `source .venv/bin/activate` antes de usar os alvos do `make`.
 > O Makefile chama `.venv/bin/python3` diretamente — o ambiente virtual já é usado de forma transparente.
