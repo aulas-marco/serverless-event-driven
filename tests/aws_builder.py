@@ -39,6 +39,7 @@ Glossário de siglas — explicadas uma vez aqui, usadas em todo o projeto
 import json
 
 from tests.helpers import deploy_lambda, drain_queue, wait_until
+from tests.narracao import narrador
 
 
 # ── Funções auxiliares privadas ───────────────────────────────────────────────
@@ -107,6 +108,10 @@ class TopologiaFanout:
             QueueName=self.NOME_DA_FILA_NOTIFICACAO
         )["QueueUrl"]
 
+        narrador.recurso("tópico SNS", self.NOME_DO_TOPICO, arn=self.arn_do_topico)
+        narrador.recurso("fila SQS", self.NOME_DA_FILA_ESTOQUE, url=self.url_fila_estoque)
+        narrador.recurso("fila SQS", self.NOME_DA_FILA_NOTIFICACAO, url=self.url_fila_notificacao)
+
         # Assinaturas: cada fila "escuta" o tópico.
         # RawMessageDelivery=true → entrega o JSON puro, sem envelope SNS.
         for url_da_fila in [self.url_fila_estoque, self.url_fila_notificacao]:
@@ -116,6 +121,11 @@ class TopologiaFanout:
                 Endpoint=_obter_arn_da_fila(sqs, url_da_fila),
                 Attributes={"RawMessageDelivery": "true"},
             )
+            narrador.recurso(
+                "assinatura SNS → SQS", url_da_fila.split("/")[-1],
+                topico=self.NOME_DO_TOPICO, raw_delivery="true",
+            )
+        narrador.nota("O fan-out vive nas assinaturas: 1 publish gera 1 entrega por fila.")
 
         # Drena mensagens de execuções anteriores para isolar este módulo de testes
         drain_queue(sqs, self.url_fila_estoque)
@@ -128,6 +138,10 @@ class TopologiaFanout:
         resposta = self._sns.publish(
             TopicArn=self.arn_do_topico,
             Message=json.dumps({"pedidoId": pedido_id}),
+        )
+        narrador.evento(
+            "PedidoCriado publicado no tópico SNS",
+            {"pedidoId": pedido_id, "MessageId": resposta["MessageId"]},
         )
         return resposta["MessageId"]
 
@@ -206,6 +220,9 @@ class TabelaDeDeduplicacao:
             TableName=self.NOME,
             TimeToLiveSpecification={"Enabled": True, "AttributeName": "expira_em"},
         )
+        narrador.recurso(
+            "tabela DynamoDB", self.NOME, chave="messageId (HASH)", ttl="expira_em",
+        )
 
     # ── Consultas de negócio ──────────────────────────────────────────────────
 
@@ -261,6 +278,9 @@ class ProcessadorDePedidos:
             handler=self.HANDLER,
             env_vars={"DYNAMODB_TABLE": nome_da_tabela},
         )
+        narrador.recurso(
+            "Lambda", self.NOME, handler=self.HANDLER, tabela=nome_da_tabela,
+        )
 
     def processar(self, message_id: str) -> dict:
         """
@@ -273,6 +293,10 @@ class ProcessadorDePedidos:
                 {"body": json.dumps({"messageId": message_id, "valor": "99.90"})}
             ]
         }
+        narrador.evento(
+            "evento SQS despachado → Lambda processa-pedido",
+            {"messageId": message_id, "valor": "99.90"},
+        )
         return self._lam.invoke(
             FunctionName=self.NOME,
             InvocationType="RequestResponse",
@@ -329,6 +353,16 @@ class FilaComDlq:
                 "RedrivePolicy": politica_de_reenvio,
             },
         )["QueueUrl"]
+        narrador.recurso("fila SQS (DLQ)", nome_da_dlq, url=self.url_fila_morta)
+        narrador.recurso(
+            "fila SQS principal", nome_da_fila,
+            maxReceiveCount=str(max_tentativas),
+            visibility_timeout=f"{self.TEMPO_DE_VISIBILIDADE_EM_SEGUNDOS}s",
+        )
+        narrador.nota(
+            "A RedrivePolicy na fila principal aponta para a DLQ — não existe "
+            "tipo especial 'DLQ'; é só outra fila referenciada."
+        )
 
     # ── Operações de negócio ──────────────────────────────────────────────────
 
@@ -338,6 +372,7 @@ class FilaComDlq:
             QueueUrl=self.url_fila_principal,
             MessageBody=json.dumps(corpo),
         )
+        narrador.evento("mensagem enviada à fila principal", corpo)
 
     def receber_da_fila_morta(self) -> list:
         """Recebe (sem deletar) até 10 mensagens da DLQ."""
@@ -379,11 +414,15 @@ class ConsumidoraDeEstoque:
             source_path=self.CAMINHO,
             handler=self.HANDLER,
         )
+        narrador.recurso("Lambda", self.NOME, handler=self.HANDLER)
         # ESM: cria o vínculo SQS → Lambda
         arn_da_fila = _obter_arn_da_fila(
             _cliente_sqs_auxiliar(), url_da_fila_principal
         )
         _criar_esm(lam, self.NOME, arn_da_fila)
+        narrador.recurso(
+            "Event Source Mapping (SQS → Lambda)", self.NOME, batch_size="1",
+        )
 
 
 def _cliente_sqs_auxiliar():
@@ -416,6 +455,11 @@ class ContaBancariaEventStore:
     def __init__(self, dynamodb):
         self._dynamodb = dynamodb
         self._criar_se_nao_existe()
+        narrador.recurso(
+            "tabela DynamoDB (event store)", self.NOME_TABELA,
+            chave="aggregate_id (HASH) + sequencia (RANGE)",
+            streams="NEW_IMAGE",
+        )
 
     def _criar_se_nao_existe(self):
         existentes = self._dynamodb.meta.client.list_tables()["TableNames"]
@@ -460,6 +504,7 @@ class TabelaSnapshots:
             BillingMode="PAY_PER_REQUEST",
         )
         self.tabela.wait_until_exists()
+        narrador.recurso("tabela DynamoDB (snapshots)", self.NOME_TABELA, chave="aggregate_id (HASH)")
 
 
 # ── U2 — Projeção CQRS via DynamoDB Streams ──────────────────────────────────
@@ -492,8 +537,12 @@ class ProjecaoSaldo:
         self._endpoint_interno = self._endpoint_localstack_interno()
 
         self._criar_tabela_saldo_se_nao_existe()
+        narrador.recurso("tabela DynamoDB (modelo de leitura)", self.NOME_TABELA, chave="conta_id (HASH)")
         self._deploy_lambda()
+        narrador.recurso("Lambda (projeção)", self.NOME_FUNCAO, handler=self.HANDLER)
         self._criar_esm_stream()
+        narrador.recurso("Event Source Mapping (DynamoDB Stream → Lambda)", self.NOME_FUNCAO, batch_size="1")
+        narrador.nota("A projeção é assíncrona: o Stream aciona a Lambda que atualiza `saldo_atual` (consistência eventual).")
 
     @staticmethod
     def _endpoint_localstack_interno() -> str:
@@ -606,6 +655,8 @@ class FilasEDeCacheU3:
 
     def __init__(self, sqs, dynamodb):
         self.urls = {nome: sqs.create_queue(QueueName=nome)["QueueUrl"] for nome in self.FILAS}
+        for nome in self.FILAS:
+            narrador.recurso("fila SQS", nome, url=self.urls[nome])
         existentes = dynamodb.meta.client.list_tables()["TableNames"]
         if self.NOME_TABELA not in existentes:
             t = dynamodb.create_table(
@@ -616,6 +667,7 @@ class FilasEDeCacheU3:
             )
             t.wait_until_exists()
         self.tabela = dynamodb.Table(self.NOME_TABELA)
+        narrador.recurso("tabela DynamoDB (cache de classificações)", self.NOME_TABELA, chave="hash_texto (HASH)")
 
     def receber(self, sqs, fila: str) -> list:
         resp = sqs.receive_message(QueueUrl=self.urls[fila], MaxNumberOfMessages=10, WaitTimeSeconds=1)
