@@ -58,3 +58,13 @@ def test_observacao_formata_antes_depois(capsys, monkeypatch):
     n.observacao("saldo projetado", antes=0, depois=80)
     saida = capsys.readouterr().out
     assert "0 → 80" in saida
+
+
+def test_observacao_so_depois_nao_mostra_none(capsys, monkeypatch):
+    monkeypatch.setenv("NARRAR", "1")
+    n = Narrador()
+    n.demo("D", "r")
+    n.observacao("entregue", depois="P-1")
+    saida = capsys.readouterr().out
+    assert "entregue: P-1" in saida
+    assert "None" not in saida

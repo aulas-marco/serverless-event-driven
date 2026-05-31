@@ -60,8 +60,12 @@ class Narrador:
     def observacao(self, texto: str, antes=None, depois=None) -> None:
         if not self.ativo:
             return
-        if antes is not None or depois is not None:
+        if antes is not None and depois is not None:
             texto = f"{texto}: {antes} → {depois}"
+        elif depois is not None:
+            texto = f"{texto}: {depois}"
+        elif antes is not None:
+            texto = f"{texto}: {antes}"
         self._linha_passo("👀", texto)
 
     def nota(self, texto: str) -> None:
