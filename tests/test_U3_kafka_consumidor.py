@@ -5,7 +5,10 @@ import pytest
 from src.U3_kafka.produtor import criar_producer, criar_topico, publicar
 from src.U3_kafka.consumidor import criar_consumidor, consumir_uma
 
-TOPICO = "eventos-suporte"
+# Tópico único por execução: isola o consumidor do backlog acumulado de outros
+# testes/execuções (com earliest, um tópico compartilhado faria o consumidor
+# replayar centenas de mensagens e estourar o orçamento de polls antes de achar a sua).
+TOPICO = f"eventos-suporte-consumidor-{uuid.uuid4()}"
 
 
 @pytest.fixture(scope="module")
