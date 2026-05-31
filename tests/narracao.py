@@ -71,12 +71,15 @@ class Narrador:
     def nota(self, texto: str) -> None:
         if not self.ativo:
             return
-        print(f"      💡  {texto}", file=sys.stdout)
+        # Quebra de linha à frente: separa do marcador de progresso do pytest
+        # (que fica pendurado sem newline) e dá um respiro entre os passos.
+        print(f"\n      💡  {texto}", file=sys.stdout)
 
     # ── privados ──
     def _linha_passo(self, simbolo: str, texto: str) -> None:
         self._passo += 1
-        print(f"  {self._passo}. {simbolo}  {texto}", file=sys.stdout)
+        # Quebra de linha à frente: ver comentário em nota().
+        print(f"\n  {self._passo}. {simbolo}  {texto}", file=sys.stdout)
 
     def _payload(self, payload) -> None:
         if isinstance(payload, dict):
