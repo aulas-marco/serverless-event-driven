@@ -4,6 +4,7 @@ import pytest
 
 from src.U3_kafka.produtor import criar_producer, criar_topico, publicar
 from src.U3_kafka.consumidor import criar_consumidor, consumir_uma
+from tests.narracao import narrador
 
 # Tópico único por execução: isola o consumidor do backlog acumulado de outros
 # testes/execuções (com earliest, um tópico compartilhado faria o consumidor
@@ -11,14 +12,24 @@ from src.U3_kafka.consumidor import criar_consumidor, consumir_uma
 TOPICO = f"eventos-suporte-consumidor-{uuid.uuid4()}"
 
 
+@pytest.fixture(scope="module", autouse=True)
+def _demo_banner():
+    narrador.demo(
+        "U3V8 — Consumidor Kafka (commit manual, at-least-once)",
+        "Sem commit do offset, a mensagem é relida na sessão seguinte do mesmo grupo.",
+    )
+
+
 @pytest.fixture(scope="module")
 def topico():
     criar_topico(TOPICO, particoes=6)
+    narrador.recurso("tópico Kafka", TOPICO, particoes="6")
     return TOPICO
 
 
 def test_consome_mensagem_publicada(topico):
     chave = f"k-{uuid.uuid4()}"
+    narrador.evento("mensagem publicada no Kafka", {"chave": chave, "valor": {"sku": "ABC"}})
     publicar(criar_producer(), topico, chave=chave, valor={"sku": "ABC"})
 
     consumidor = criar_consumidor(group_id=f"g-{uuid.uuid4()}")
@@ -31,6 +42,7 @@ def test_consome_mensagem_publicada(topico):
                 encontrada = msg
                 break
         assert encontrada is not None
+        narrador.consumo("consumidor Kafka (in-process)", json.loads(encontrada.value()))
         assert json.loads(encontrada.value())["sku"] == "ABC"
     finally:
         consumidor.close()
@@ -56,8 +68,10 @@ def test_at_least_once_sem_commit_rele(topico):
     c1, achou1 = ler_minha_msg()
     assert achou1
     c1.close()
+    narrador.nota("1ª sessão leu a mensagem mas NÃO commitou o offset; fechou.")
 
     # 2ª sessão, mesmo group.id: offset não commitado → relê
     c2, achou2 = ler_minha_msg()
     c2.close()
+    narrador.observacao("2ª sessão (mesmo group.id) releu a mensagem — at-least-once", depois=achou2)
     assert achou2
