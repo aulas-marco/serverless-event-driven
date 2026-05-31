@@ -242,7 +242,7 @@ Pontos-chave da configuração:
 | `BatchSize: 1` | 1 | Um e-mail por invocação — facilita rastreamento e isolamento de falhas |
 | `SQSSendMessagePolicy` × 3 | alta, baixa, sem-classificacao | A Lambda precisa apenas de `SendMessage` nas três filas de saída |
 
-> `FilaEmailsEntrada` aciona a Lambda via Event Source Mapping ([ESM](../../glossario.md#esm)). As filas de saída (`alta-prioridade`, `baixa-prioridade`, `sem-classificacao`) são destinos de roteamento — a Lambda envia para elas diretamente via SDK.
+> `FilaEmailsEntrada` aciona a Lambda via Event Source Mapping ([ESM](../../unidade-1/glossario.md#esm)). As filas de saída (`alta-prioridade`, `baixa-prioridade`, `sem-classificacao`) são destinos de roteamento — a Lambda envia para elas diretamente via SDK.
 
 ---
 

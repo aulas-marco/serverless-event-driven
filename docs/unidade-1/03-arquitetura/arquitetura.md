@@ -2,7 +2,7 @@
 
 Este módulo apresenta a visão arquitetural consolidada do projeto. Em vez de repetir os diagramas já apresentados em cada demo, aqui você os encontra todos reunidos em um único documento: contexto C4, topologias por demo e a tabela de componentes.
 
-Acesse [`../architecture/README.md`](../architecture/README.md) para ver:
+Acesse [os diagramas](diagramas.md) para ver:
 
 - O diagrama de contexto C4 (nível 1) — quem usa o sistema e como
 - A topologia fan-out da U1V7 (flowchart)

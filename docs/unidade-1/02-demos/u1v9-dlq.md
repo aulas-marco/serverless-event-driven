@@ -246,4 +246,4 @@ Pratique com os exercícios: [Exercícios U1V9](../exercicios.md#u1v9).
 
 ---
 
-⬅️ [Anterior: Idempotência com DynamoDB](u1v8-idempotencia.md) · 📑 [Índice](../index.md) · [Próximo: Aprofundando a Arquitetura](../03-aprofundar/arquitetura.md) ➡️
+⬅️ [Anterior: Idempotência com DynamoDB](u1v8-idempotencia.md) · 📑 [Índice](../index.md) · [Próximo: Arquitetura](../03-arquitetura/arquitetura.md) ➡️

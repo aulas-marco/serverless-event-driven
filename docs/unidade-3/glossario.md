@@ -1,6 +1,6 @@
 # Glossário — Unidade 3
 
-> 📌 Termos específicos de Kafka, fluxos assíncronos e processamento orientado a eventos usados ao longo da Unidade 3. Conceitos gerais de infraestrutura AWS estão no [Glossário da Unidade 1](../glossario.md); Event Sourcing e CQRS no [Glossário da Unidade 2](../unidade-2/glossario.md).
+> 📌 Termos específicos de Kafka, fluxos assíncronos e processamento orientado a eventos usados ao longo da Unidade 3. Conceitos gerais de infraestrutura AWS estão no [Glossário da Unidade 1](../unidade-1/glossario.md); Event Sourcing e CQRS no [Glossário da Unidade 2](../unidade-2/glossario.md).
 
 ---
 

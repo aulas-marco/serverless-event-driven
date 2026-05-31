@@ -20,28 +20,37 @@ Este portal é o guia de estudo da **Unidade 3 do curso IEC EAD — Serverless C
 - **Leia na ordem** da trilha abaixo — cada página pressupõe o que veio antes.
 - Cada página tem um **rodapé de trilha** com links para a anterior e a próxima, além de um atalho para este índice.
 - Todo trecho de código mostrado nas páginas é fiel ao que está em `src/U3_kafka/` e `src/U3_ia/` — se quiser verificar, abra o arquivo correspondente.
-- **Pré-requisito de ambiente**: o `make up` agora sobe LocalStack **e Kafka** — siga o [Setup local](../00-comece-aqui/setup-local.md) se ainda não tiver o ambiente rodando.
+- **Pré-requisito de ambiente**: o `make up` sobe LocalStack **e Kafka** — siga o [Setup local](00-comece-aqui/setup-local.md) se ainda não tiver o ambiente rodando.
 
 ---
 
 ## Mapa da trilha da Unidade 3
 
+### Comece aqui
+
+1. [Pré-requisitos](00-comece-aqui/pre-requisitos.md) — ferramentas necessárias, bibliotecas extras (confluent-kafka, anthropic) e o que a U3 adiciona.
+2. [Setup local](00-comece-aqui/setup-local.md) — clonar, `make install`, `make up` (LocalStack + Kafka + Kafka UI) e `make test-u3`.
+
 ### Fundamentos
 
-1. [Kafka — log, partições e consumer groups](01-fundamentos/1-kafka-log-particoes.md) — log persistente, partições/chaves/ordenação, consumer groups e semânticas de entrega.
-2. [Programação Reativa com asyncio](01-fundamentos/2-reativa-asyncio.md) — contrapressão e fluxos assíncronos com asyncio.
-3. [IA em Eventos](01-fundamentos/3-ia-em-eventos.md) — IA classificando eventos: casos de uso e padrões econômicos.
+3. [Kafka — log, partições e consumer groups](01-fundamentos/1-kafka-log-particoes.md) — log persistente, partições/chaves/ordenação, consumer groups e semânticas de entrega.
+4. [Programação Reativa com asyncio](01-fundamentos/2-reativa-asyncio.md) — contrapressão e fluxos assíncronos com asyncio.
+5. [IA em Eventos](01-fundamentos/3-ia-em-eventos.md) — IA classificando eventos: casos de uso e padrões econômicos.
 
 ### Demos
 
-4. [U3V7 — Produtor Kafka](02-demos/u3v7-kafka-produtor.md) — produtor Kafka e particionamento por chave.
-5. [U3V8 — Consumidor Kafka](02-demos/u3v8-kafka-consumidor.md) — consumidor, commit manual e at-least-once.
-6. [U3V9 — Classificador com IA](02-demos/u3v9-classificador-ia.md) — Lambda Python classificando com IA, cache DynamoDB, roteamento SQS.
+6. [U3V7 — Produtor Kafka](02-demos/u3v7-kafka-produtor.md) — produtor Kafka e particionamento por chave.
+7. [U3V8 — Consumidor Kafka](02-demos/u3v8-kafka-consumidor.md) — consumidor, commit manual e at-least-once.
+8. [U3V9 — Classificador com IA](02-demos/u3v9-classificador-ia.md) — Lambda Python classificando com IA, cache DynamoDB, roteamento SQS.
+
+### Arquitetura
+
+9. [Arquitetura](03-arquitetura/arquitetura.md) — topologia Kafka, pipeline de IA com cache e roteamento, tabela de componentes.
 
 ### Exercícios e Referência
 
-7. [Exercícios](exercicios.md) — desafios práticos para fixar Kafka, reativa e IA em eventos.
-8. [Glossário](glossario.md) — referência de termos e siglas de Kafka, programação reativa e IA.
+10. [Exercícios](exercicios.md) — desafios práticos para fixar Kafka, reativa e IA em eventos.
+11. [Glossário](glossario.md) — referência de termos e siglas de Kafka, programação reativa e IA.
 
 ---
 
@@ -55,6 +64,6 @@ Este portal é o guia de estudo da **Unidade 3 do curso IEC EAD — Serverless C
 
 ---
 
-📑 Você está no índice da Unidade 3 · [Próximo: Kafka — o log ➡️](01-fundamentos/1-kafka-log-particoes.md)
+📑 Você está no índice da Unidade 3 · [Próximo: Pré-requisitos ➡️](00-comece-aqui/pre-requisitos.md)
 
 ⬆️ [Portal do curso](../index.md)

@@ -62,7 +62,7 @@ A mesma stack roda nos dois ambientes porque toda a topologia é declarada como 
 - **ADR-002** — por que LocalStack foi escolhido para os testes locais.
 - **ADR-003** — a convenção `endpoint_url` e por que ela é preferível a mocks.
 
-Você pode ler os dois em [`../03-aprofundar/decisoes-adr.md`](../03-aprofundar/decisoes-adr.md).
+Você pode ler os dois em [`../03-arquitetura/decisoes-adr.md`](../03-arquitetura/decisoes-adr.md).
 
 ---
 
@@ -75,7 +75,7 @@ Existem dois lugares onde a infraestrutura está definida:
 | `infra/template.yaml` | Modelo SAM — declara todos os recursos (tópico [SNS](../glossario.md#sns), filas [SQS](../glossario.md#sqs), funções Lambda, [ESMs](../glossario.md#esm), [DLQ](../glossario.md#dlq), [TTL](../glossario.md#ttl)). Usado para deploy na AWS Real. |
 | `tests/aws_builder.py` | Constrói os mesmos recursos programaticamente via boto3 para os testes de integração. |
 
-O `aws_builder.py` é descrito em detalhes em [`../03-aprofundar/aws-builder.md`](../03-aprofundar/aws-builder.md).
+O `aws_builder.py` é descrito em detalhes em [`../03-arquitetura/aws-builder.md`](../03-arquitetura/aws-builder.md).
 
 > 💡 **Dica**
 >

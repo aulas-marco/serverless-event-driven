@@ -1,6 +1,6 @@
 # Glossário — Unidade 2
 
-> 📌 Termos específicos de Event Sourcing e CQRS usados ao longo da Unidade 2. Os conceitos gerais de infraestrutura AWS estão no [Glossário da Unidade 1](../glossario.md).
+> 📌 Termos específicos de Event Sourcing e CQRS usados ao longo da Unidade 2. Os conceitos gerais de infraestrutura AWS estão no [Glossário da Unidade 1](../unidade-1/glossario.md).
 
 ---
 

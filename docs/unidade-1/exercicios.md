@@ -58,4 +58,4 @@ Experimente e observe — cada exercício propõe uma modificação pequena e ci
 
 ---
 
-⬅️ [Anterior: Decisões (ADRs)](03-aprofundar/decisoes-adr.md) · 📑 [Índice](index.md) · [Próximo: Glossário](glossario.md) ➡️
+⬅️ [Anterior: Decisões (ADRs)](03-arquitetura/decisoes-adr.md) · 📑 [Índice](index.md) · [Próximo: Glossário](glossario.md) ➡️
