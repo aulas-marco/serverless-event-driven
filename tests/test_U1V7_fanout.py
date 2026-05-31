@@ -17,6 +17,15 @@ import pytest
 
 from tests.aws_builder import TopologiaFanout
 from tests.helpers import wait_until
+from tests.narracao import narrador
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _demo_banner():
+    narrador.demo(
+        "U1V7 — Fan-out com SNS + SQS",
+        "Uma publicação no tópico entrega em DUAS filas SQS independentes.",
+    )
 
 
 @pytest.fixture(scope="module")
@@ -88,6 +97,7 @@ def test_um_publish_entrega_o_mesmo_pedido_nas_duas_filas(topologia):
         timeout=15,
         message="pedido não chegou nas duas filas simultaneamente",
     )
+    narrador.observacao("Mesmo pedido entregue nas DUAS filas (fan-out)", depois=pedido_id)
 
 
 def test_raw_delivery_entrega_json_puro_sem_envelope_do_sns(topologia):
@@ -117,6 +127,7 @@ def test_raw_delivery_entrega_json_puro_sem_envelope_do_sns(topologia):
 
     corpo = next(m["Body"] for m in mensagens if pedido_id in m["Body"])
     payload = json.loads(corpo)
+    narrador.consumo("fila-estoque (JSON puro, sem envelope SNS)", payload)
 
     assert "pedidoId" in payload, (
         f"O body deve ser JSON puro do pedido, mas chegou: {corpo}"

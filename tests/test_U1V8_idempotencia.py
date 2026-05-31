@@ -22,6 +22,15 @@ import pytest
 
 from tests.aws_builder import ProcessadorDePedidos, TabelaDeDeduplicacao
 from tests.helpers import wait_until
+from tests.narracao import narrador
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _demo_banner():
+    narrador.demo(
+        "U1V8 — Idempotência com Lambda + DynamoDB",
+        "Processar a MESMA mensagem 2× grava só 1 registro (PutItem condicional).",
+    )
 
 
 @pytest.fixture(scope="module")
@@ -74,6 +83,9 @@ def test_segunda_entrega_do_mesmo_pedido_e_ignorada(processador, tabela):
 
     assert not processador.retornou_erro(resposta_1), "primeira entrega não deve falhar"
     assert not processador.retornou_erro(resposta_2), "segunda entrega não deve falhar"
+
+    narrador.nota("2ª entrega do mesmo messageId: a escrita condicional falha e a duplicata é descartada.")
+    narrador.observacao("Exatamente 1 registro permanece no DynamoDB", depois=message_id)
 
     assert tabela.contar_registros(message_id) == 1, (
         f"Esperava 1 registro (messageId={message_id}), "

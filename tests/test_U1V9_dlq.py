@@ -19,9 +19,18 @@ import pytest
 
 from tests.aws_builder import ConsumidoraDeEstoque, FilaComDlq
 from tests.helpers import assert_never, wait_until
+from tests.narracao import narrador
 
 NOME_DA_FILA_PRINCIPAL = "fila-estoque-v9"
 NOME_DA_FILA_MORTA = "fila-estoque-v9-dlq"
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _demo_banner():
+    narrador.demo(
+        "U1V9 — Dead-Letter Queue (DLQ)",
+        "Mensagem que sempre falha vai para a DLQ após maxReceiveCount tentativas.",
+    )
 
 
 @pytest.fixture(scope="module")
@@ -54,6 +63,7 @@ def test_mensagem_envenenada_e_roteada_para_dlq_apos_tres_falhas(fila, consumido
     sku = f"SKU-{uuid.uuid4().hex[:8].upper()}"
 
     fila.enviar_mensagem({"sku": sku, "qtd": 1, "defeituoso": True})
+    narrador.nota("Mensagem com defeituoso=True: a Lambda falha a cada recepção.")
 
     wait_until(
         lambda: fila.mensagem_chegou_na_fila_morta(sku),
@@ -61,6 +71,7 @@ def test_mensagem_envenenada_e_roteada_para_dlq_apos_tres_falhas(fila, consumido
         interval=2,
         message="a mensagem envenenada não chegou na DLQ no tempo esperado",
     )
+    narrador.observacao("Poison message roteada para a DLQ após 3 falhas", depois=sku)
 
 
 @pytest.mark.timeout(120)
@@ -95,6 +106,7 @@ def test_dlq_preserva_o_payload_original_intacto(fila, consumidora):
         interval=2,
         message="mensagem não chegou na DLQ para validar o payload",
     )
+    narrador.consumo("DLQ (payload íntegro para investigação)", payload_na_dlq)
 
     assert payload_na_dlq["sku"] == sku
     assert payload_na_dlq["qtd"] == 5
