@@ -1,9 +1,20 @@
 from decimal import Decimal
 
+import pytest
+
 from src.U2_event_sourcing.eventos import (
     ContaCriada, DepositoRealizado, SaqueRealizado, evento_de_item, item_de_evento,
 )
 from src.U2_event_sourcing.conta import ContaBancaria
+from tests.narracao import narrador
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _demo_banner():
+    narrador.demo(
+        "U2V7 — Event Store (append-only)",
+        "Eventos imutáveis em sequência; o saldo é derivado pelo fold (replay).",
+    )
 
 
 def test_evento_serializa_e_desserializa_preservando_tipo_e_dados():
@@ -27,6 +38,8 @@ def test_reconstruir_faz_fold_dos_eventos_ate_o_saldo():
         SaqueRealizado(aggregate_id="conta-1", valor=Decimal("30")),
     ]
     conta = ContaBancaria.reconstruir(eventos)
+    narrador.evento("3 eventos em memória", {"sequencia": ["ContaCriada", "Deposito 100", "Saque 30"]})
+    narrador.observacao("Saldo derivado pelo fold (100 − 30)", depois=str(conta.saldo))
     assert conta.existe is True
     assert conta.saldo == Decimal("70")
 
@@ -38,7 +51,6 @@ def test_conta_sem_eventos_nao_existe():
 
 
 import uuid
-import pytest
 from tests.aws_builder import ContaBancariaEventStore
 from src.U2_event_sourcing.repositorio import EventStore
 
@@ -54,6 +66,7 @@ def test_append_grava_em_sequencia_crescente_e_carrega_ordenado(event_store_tabl
 
     s1 = store.append(conta_id, ContaCriada(aggregate_id=conta_id))
     s2 = store.append(conta_id, DepositoRealizado(aggregate_id=conta_id, valor=Decimal("100")))
+    narrador.evento("2 eventos gravados no event store (append-only)", {"sequencias": [s1, s2]})
 
     assert (s1, s2) == (1, 2)
     eventos = store.carregar_por_agregado(conta_id)
@@ -83,6 +96,7 @@ def test_depositar_e_sacar_atualizam_o_saldo_reconstruido(event_store_table, dyn
     sacar(store, conta_id, Decimal("50"))
 
     conta = ContaBancaria.reconstruir(store.carregar_por_agregado(conta_id))
+    narrador.observacao("Saldo reconstruído após depositar 200 e sacar 50", depois=str(conta.saldo))
     assert conta.saldo == Decimal("150")
 
 
