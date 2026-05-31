@@ -8,8 +8,9 @@ Este portal é o guia de estudo do curso **IEC EAD — Serverless Computing e Ar
 
 - **Unidade 1 — Serverless, Eventos e Mensageria** (esta trilha, abaixo): fan-out, idempotência e DLQ com Lambda + SNS + SQS + DynamoDB (demos U1V7, U1V8, U1V9).
 - **Unidade 2 — [Event Sourcing e CQRS](unidade-2/index.md)**: event store append-only, replay/snapshots e projeção via DynamoDB Streams (demos U2V7, U2V8, U2V9).
+- **Unidade 3 — [Kafka, Programação Reativa e IA](unidade-3/index.md)**: Kafka (produtor/consumidor), contrapressão com asyncio e classificação de eventos com IA (demos U3V7, U3V8, U3V9).
 
-A Unidade 1 abaixo é o ponto de partida; a [Unidade 2](unidade-2/index.md) tem sua própria trilha.
+A Unidade 1 abaixo é o ponto de partida; as Unidades [2](unidade-2/index.md) e [3](unidade-3/index.md) têm suas próprias trilhas.
 
 ---
 
