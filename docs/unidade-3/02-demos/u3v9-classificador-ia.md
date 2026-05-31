@@ -249,10 +249,10 @@ Pontos-chave da configuração:
 ## 6. Como rodar e observar
 
 ```bash
-make test-u3
+make test-u3v9
 ```
 
-Os testes para esta demo estão em `tests/test_U3_ia_classificador.py`. Eles **não precisam de chave Anthropic** — injetam um `ClienteFake` via `usar_cliente_llm`:
+Os testes para esta demo estão em `tests/test_U3V9_ia_classificador.py`. Eles **não precisam de chave Anthropic** — injetam um `ClienteFake` via `usar_cliente_llm`:
 
 ```python
 class FakeMensagens:

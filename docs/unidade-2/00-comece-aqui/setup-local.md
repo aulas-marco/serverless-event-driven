@@ -61,16 +61,16 @@ O script faz **varredura de saúde** (polling do endpoint `/health`) — não us
 make test-u2
 ```
 
-Roda os três conjuntos de testes da U2 com `pytest tests/test_U2_*.py -v`.
+Roda os três conjuntos de testes da U2 com `pytest tests/test_U2V*.py -v`.
 
 | Alvo | Demo | O que cobre |
 |---|---|---|
 | `make test-u2` | Todos os testes da U2 | Event store, replay/snapshots e projeção via Streams |
-| `make test-v7` (U2V7) | Event Store | Comandos `depositar` e `sacar`; append-only; replay de saldo |
-| `make test-v8` (U2V8) | Replay e Snapshots | Idempotência do replay; gravação e uso de snapshots |
-| `make test-v9` (U2V9) | CQRS e Projeção | Propagação via DynamoDB Streams; consistência eventual; `transferir` atômico |
+| `make test-u2v7` | U2V7 — Event Store | Comandos `depositar` e `sacar`; append-only; replay de saldo |
+| `make test-u2v8` | U2V8 — Replay e Snapshots | Idempotência do replay; gravação e uso de snapshots |
+| `make test-u2v9` | U2V9 — CQRS e Projeção | Propagação via DynamoDB Streams; consistência eventual; `transferir` atômico |
 
-> **Sobre o tempo de execução:** o teste de projeção (`test_U2_cqrs_projecao.py`) usa `wait_until` com timeout de 60 segundos para aguardar a propagação assíncrona do DynamoDB Streams. Esse comportamento é esperado — não é lentidão, é o mecanismo de consistência eventual sendo demonstrado.
+> **Sobre o tempo de execução:** o teste de projeção (`test_U2V9_cqrs_projecao.py`) usa `wait_until` com timeout de 60 segundos para aguardar a propagação assíncrona do DynamoDB Streams. Esse comportamento é esperado — não é lentidão, é o mecanismo de consistência eventual sendo demonstrado.
 
 ---
 

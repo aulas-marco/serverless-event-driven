@@ -162,7 +162,7 @@ Se não existir nenhum snapshot, a função cai no caminho padrão: replay compl
 Execute os testes da demo com:
 
 ```bash
-make test-u2
+make test-u2v8
 ```
 
 Os dois testes cobrem os cenários essenciais:

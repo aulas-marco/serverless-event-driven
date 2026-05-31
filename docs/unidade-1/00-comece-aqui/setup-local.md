@@ -56,16 +56,16 @@ Roda os três conjuntos de testes com `pytest tests/ -v`.
 
 | Alvo | Demo | Observação |
 |---|---|---|
-| `make test-v7` | Fan-out (SNS → múltiplas filas SQS) | Rápido |
-| `make test-v8` | Idempotência (escrita condicional) | Rápido |
-| `make test-v9` | DLQ (ciclos de retry) | **~2 min** — aguarda 3 ciclos de reprocessamento |
+| `make test-u1v7` | Fan-out (SNS → múltiplas filas SQS) | Rápido |
+| `make test-u1v8` | Idempotência (escrita condicional) | Rápido |
+| `make test-u1v9` | DLQ (ciclos de retry) | **~2 min** — aguarda 3 ciclos de reprocessamento |
 
 Você também pode rodar cada demo individualmente:
 
 ```bash
-make test-v7
-make test-v8
-make test-v9
+make test-u1v7
+make test-u1v8
+make test-u1v9
 ```
 
 ---

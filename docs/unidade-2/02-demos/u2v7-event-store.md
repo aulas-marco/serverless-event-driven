@@ -295,10 +295,10 @@ Pontos importantes da infraestrutura:
 Execute os testes da demo com:
 
 ```bash
-make test-u2
+make test-u2v7
 ```
 
-Os testes em `tests/test_U2_event_store.py` cobrem os cenários essenciais:
+Os testes em `tests/test_U2V7_event_store.py` cobrem os cenários essenciais:
 
 | Teste | O que verifica |
 |-------|----------------|

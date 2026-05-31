@@ -69,12 +69,21 @@ make up
 # 4. Rodar todos os testes
 make test
 
-# Ou por unidade:
-make test-v7   # U1 — fan-out
-make test-v8   # U1 — idempotência
-make test-v9   # U1 — DLQ (~2 min — aguarda 3 ciclos de retry)
+# Ou por unidade (agregado):
+make test-u1   # U1 — Serverless / mensageria
 make test-u2   # U2 — Event Sourcing + CQRS
 make test-u3   # U3 — Kafka + IA
+
+# Ou por vídeo (walkthrough V7/V8/V9 de cada unidade):
+make test-u1v7   # U1V7 — fan-out
+make test-u1v8   # U1V8 — idempotência
+make test-u1v9   # U1V9 — DLQ (~2 min — aguarda 3 ciclos de retry)
+make test-u2v7   # U2V7 — event store
+make test-u2v8   # U2V8 — replay e snapshots
+make test-u2v9   # U2V9 — CQRS e projeção
+make test-u3v7   # U3V7 — produtor Kafka
+make test-u3v8   # U3V8 — consumidor Kafka
+make test-u3v9   # U3V9 — classificador com IA
 
 # 5. Inspecionar recursos criados (U1/U2 — serviços AWS)
 export AWS_ENDPOINT_URL=http://localhost:4566
@@ -108,18 +117,18 @@ serverless-event-driven/
 │       ├── wait-localstack.sh
 │       └── wait-kafka.sh
 ├── tests/
-│   ├── helpers.py                # esperar_até, implantar_lambda, criar_cliente
+│   ├── helpers.py                # wait_until, deploy_lambda, make_client
 │   ├── aws_builder.py            # Padrão de infraestrutura educacional
 │   ├── conftest.py               # Fixtures de sessão
 │   ├── test_U1V7_fanout.py
 │   ├── test_U1V8_idempotencia.py
 │   ├── test_U1V9_dlq.py
-│   ├── test_U2_event_store.py
-│   ├── test_U2_replay_snapshots.py
-│   ├── test_U2_cqrs_projecao.py
-│   ├── test_U3_kafka_produtor.py
-│   ├── test_U3_kafka_consumidor.py
-│   └── test_U3_ia_classificador.py
+│   ├── test_U2V7_event_store.py
+│   ├── test_U2V8_replay_snapshots.py
+│   ├── test_U2V9_cqrs_projecao.py
+│   ├── test_U3V7_kafka_produtor.py
+│   ├── test_U3V8_kafka_consumidor.py
+│   └── test_U3V9_ia_classificador.py
 └── docs/
     ├── index.md                  # Hub — portal de documentação geral
     ├── unidade-1/                # Trilha U1 (comece-aqui / fundamentos / demos / arquitetura)

@@ -148,7 +148,7 @@ Pontos-chave da configuração:
 ## 6. Rodar e observar
 
 ```bash
-make test-v9
+make test-u1v9
 ```
 
 O teste leva aproximadamente **2 minutos** porque simula os três ciclos completos de retry do [SQS](../glossario.md#sqs). Cada ciclo envolve:

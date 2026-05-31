@@ -213,7 +213,7 @@ Pontos importantes da infraestrutura:
 Execute os testes da demo com:
 
 ```bash
-make test-v8
+make test-u1v8
 ```
 
 Os 4 testes cobrem os cenários essenciais:
@@ -225,7 +225,7 @@ Os 4 testes cobrem os cenários essenciais:
 | `test_registro_de_controle_tem_data_de_expiracao` | O campo `expira_em` existe e é um timestamp no futuro (o [TTL](../glossario.md#ttl) vai funcionar) |
 | `test_duplicata_nao_gera_erro_na_funcao` | A `ConditionalCheckFailedException` não vaza como `FunctionError` |
 
-Ao rodar `make test-v8`, observe no log:
+Ao rodar `make test-u1v8`, observe no log:
 - `[NEGOCIO] Processando pedido: <id>` — aparece na primeira entrega.
 - `[IDEMPOTENCIA] Duplicata descartada: <id>` — aparece na segunda entrega.
 

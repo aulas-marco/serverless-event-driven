@@ -129,10 +129,10 @@ Consequência direta: se a instância trava, reinicia, ou o handler lança uma e
 Execute os testes desta demo com:
 
 ```bash
-make test-u3
+make test-u3v8
 ```
 
-Os testes em `tests/test_U3_kafka_consumidor.py` cobrem os dois comportamentos essenciais:
+Os testes em `tests/test_U3V8_kafka_consumidor.py` cobrem os dois comportamentos essenciais:
 
 | Teste | O que verifica |
 |-------|----------------|

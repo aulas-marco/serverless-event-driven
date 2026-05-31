@@ -226,10 +226,10 @@ Pontos-chave da configuração:
 ## 6. Rodar e observar
 
 ```bash
-make test-u2
+make test-u2v9
 ```
 
-Os testes relevantes para esta demo estão em `tests/test_U2_cqrs_projecao.py`:
+Os testes relevantes para esta demo estão em `tests/test_U2V9_cqrs_projecao.py`:
 
 ```python
 def test_projecao_reflete_evento_apos_propagacao_do_stream(projecao, dynamodb_resource):

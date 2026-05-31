@@ -128,10 +128,10 @@ Abra [http://localhost:8080](http://localhost:8080) após o `make up`.
 ### Executar os testes
 
 ```bash
-make test-u3
+make test-u3v7
 ```
 
-Os testes em `tests/test_U3_kafka_produtor.py` exercitam os dois cenários centrais:
+Os testes em `tests/test_U3V7_kafka_produtor.py` exercitam os dois cenários centrais:
 
 | Teste | O que verifica |
 |-------|----------------|

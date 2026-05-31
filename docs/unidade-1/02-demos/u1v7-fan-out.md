@@ -206,7 +206,7 @@ O fan-out vive no `template.yaml`, não no código. Há três recursos que traba
 ## 6. Rodar e observar
 
 ```bash
-make test-v7
+make test-u1v7
 ```
 
 O teste valida:
