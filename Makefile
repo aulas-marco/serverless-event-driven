@@ -2,6 +2,9 @@
         test-u1 test-u1v7 test-u1v8 test-u1v9 \
         test-u2 test-u2v7 test-u2v8 test-u2v9 \
         test-u3 test-u3v7 test-u3v8 test-u3v9 \
+        narrar-u1v7 narrar-u1v8 narrar-u1v9 \
+        narrar-u2v7 narrar-u2v8 narrar-u2v9 \
+        narrar-u3v7 narrar-u3v8 narrar-u3v9 \
         clean lint help
 
 VENV    := .venv
@@ -94,6 +97,37 @@ test-u3v8: up _check-venv  ## U3V8 — Consumidor Kafka (commit manual, at-least
 
 test-u3v9: up _check-venv  ## U3V9 — Classificador com IA (roteamento, cache, erros)
 	@$(AWS_TEST_ENV) $(PYTEST) tests/test_U3V9_ia_classificador.py -v --tb=short
+
+# ── Modo narrado (didático) ────────────────────────────────────────────────────
+# NARRAR=1 liga o Narrador; -s desativa a captura de stdout do pytest para a
+# narração aparecer ao vivo. Os `make test-*` acima permanecem silenciosos.
+
+narrar-u1v7: up _check-venv  ## U1V7 narrado — fan-out passo a passo
+	@NARRAR=1 $(AWS_TEST_ENV) $(PYTEST) tests/test_U1V7_fanout.py -s -v --tb=short
+
+narrar-u1v8: up _check-venv  ## U1V8 narrado — idempotência passo a passo
+	@NARRAR=1 $(AWS_TEST_ENV) $(PYTEST) tests/test_U1V8_idempotencia.py -s -v --tb=short
+
+narrar-u1v9: up _check-venv  ## U1V9 narrado — DLQ passo a passo (~2min)
+	@NARRAR=1 $(AWS_TEST_ENV) $(PYTEST) tests/test_U1V9_dlq.py -s -v --tb=short
+
+narrar-u2v7: up _check-venv  ## U2V7 narrado — event store passo a passo
+	@NARRAR=1 $(AWS_TEST_ENV) $(PYTEST) tests/test_U2V7_event_store.py -s -v --tb=short
+
+narrar-u2v8: up _check-venv  ## U2V8 narrado — replay e snapshots passo a passo
+	@NARRAR=1 $(AWS_TEST_ENV) $(PYTEST) tests/test_U2V8_replay_snapshots.py -s -v --tb=short
+
+narrar-u2v9: up _check-venv  ## U2V9 narrado — CQRS e projeção passo a passo (~1min)
+	@NARRAR=1 $(AWS_TEST_ENV) $(PYTEST) tests/test_U2V9_cqrs_projecao.py -s -v --tb=short
+
+narrar-u3v7: up _check-venv  ## U3V7 narrado — produtor Kafka passo a passo
+	@NARRAR=1 $(AWS_TEST_ENV) $(PYTEST) tests/test_U3V7_kafka_produtor.py -s -v --tb=short
+
+narrar-u3v8: up _check-venv  ## U3V8 narrado — consumidor Kafka passo a passo
+	@NARRAR=1 $(AWS_TEST_ENV) $(PYTEST) tests/test_U3V8_kafka_consumidor.py -s -v --tb=short
+
+narrar-u3v9: up _check-venv  ## U3V9 narrado — classificador IA passo a passo
+	@NARRAR=1 $(AWS_TEST_ENV) $(PYTEST) tests/test_U3V9_ia_classificador.py -s -v --tb=short
 
 # ── Deploy AWS Real ───────────────────────────────────────────────────────────
 
